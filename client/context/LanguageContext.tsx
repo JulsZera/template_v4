@@ -171,6 +171,17 @@ export const translations: Record<Language, Record<string, string>> = {
     "withdrawal": "Penarikan",
     "withdrawal_history": "Riwayat Penarikan",
     "coming_soon": "Segera Hadir",
+    "history_transaction": "Riwayat Transaksi",
+    "history_transaction_span": "Lihat semua transaksi anda",
+    "filter_transaction": "Filter Transaksi",
+    "filter_transaction_span": "Pilih periode dan jenis transaksi untuk melihat riwayat",
+    "start_date": "Tanggal Mulai",
+    "finish_date": "Tanggal Akhir",
+    "type_transaction": "Jenis Transaksi",
+    "search_history": "Cari Riwayat",
+    "history_result": "Hasil Pencarian",
+    "find_transaction":"transaksi ditemukan",
+
   },
   en: {
     "sign_in": "SIGN IN",

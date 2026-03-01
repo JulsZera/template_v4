@@ -60,11 +60,14 @@ func main() {
 			// TRANSACTION
 			r.Post("/deposit", handler.DepositHandler)
 			r.Post("/withdraw", handler.WithdrawHandler)
+			r.Post("/history", handler.GetHistoryHandler)
 			r.Post("/add-bank", handler.AddBankHandler)
 			r.Post("/referral", handler.ReferralHandler)
 			r.Post("/check-wallet", handler.CheckWalletHandler)
 			r.Post("/get-promotion", handler.GetPromotionHandler)
+			r.Post("/get-promotion-user", handler.GetPromotionDepositHandler)
 			r.Post("/update-popup-transaction", handler.UpdatePopupTransactionHandler)
+			r.Post("/launchgame", handler.LaunchGameHandler)
 		})
 
 	})

@@ -1,5 +1,6 @@
 // This file handles providers and games using real pagedata API with caching
-
+const API_URL = import.meta.env.VITE_API_URL;
+const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
 // ========================================
 // CATEGORY MAP (frontend → backend)
 // ========================================
@@ -26,15 +27,36 @@ const CATEGORY_MAP: Record<string, string> = {
 
 };
 
+/* =========================================================
+   TYPES
+========================================================= */
 
 
-export interface Game {
+export interface ProviderCard {
   id: number;
   name: string;
   provider: string;
   image: string;
   category: string;
+  isProvider: true;
 }
+
+export interface Game {
+  id: string;
+  name: string;
+  provider: string;
+  image: string;
+  category: string;
+
+  game_id: string;
+  game_code: string;
+  id_mapping_provider: string;
+  url?: string;
+
+  isProvider?: false;
+}
+
+export type GameItem = Game | ProviderCard;
 
 export interface ProviderData {
   id: string;
@@ -80,7 +102,14 @@ export let realPopup: any = null;
 // GET BALANCE
 // ========================================
  
+// export async function getBalance() {
+//   return await apiRequest("/balance", "POST");
+// }
+
 export async function getBalance() {
+  const jwt = localStorage.getItem("jwt");
+  if (!jwt) return null;   // 🔥 STOP DI SINI
+
   return await apiRequest("/balance", "POST");
 }
 
@@ -106,8 +135,6 @@ const providerSlugToName: Record<string, string> = {
 // API BASE
 // ========================================
 
-const API_BASE = "http://localhost:8080/api";
-
 export function uploadWithProgress(
   endpoint: string,
   formData: FormData,
@@ -117,7 +144,7 @@ export function uploadWithProgress(
     const jwt = localStorage.getItem("jwt");
 
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", API_BASE + endpoint);
+    xhr.open("POST", API_URL + endpoint);
 
     if (jwt) {
       xhr.setRequestHeader("Authorization", "Bearer " + jwt);
@@ -171,7 +198,7 @@ export async function apiRequest(
       headers["Authorization"] = "Bearer " + jwt;
     }
 
-    const response = await fetch(API_BASE + endpoint, {
+    const response = await fetch(API_URL + endpoint, {
       method,
       headers,
       body: data
@@ -197,14 +224,15 @@ export async function apiRequest(
       };
     }
 
+    // 🔥 selain 401, tetap baca body response
+    const json = await response.json();
+
+    // kalau status HTTP bukan 2xx,
+    // tetap return body dari backend
     if (!response.ok) {
-      return {
-        status: false,
-        message: "HTTP error",
-      };
+      return json;
     }
 
-    const json = await response.json();
     return json;
 
   } catch (error) {
@@ -248,7 +276,7 @@ export async function fetchPageData(): Promise<void> {
     console.log("Loading pagedata from API...");
 
     const result = await apiRequest("/pagedata", "POST", {
-      branch_id: "GGCULOX",
+      branch_id: BRANCH_ID,
     });
 
     console.log("FULL PAGEDATA RESPONSE:", result);
@@ -275,14 +303,15 @@ export async function fetchPageData(): Promise<void> {
       (game: any, index: number) => ({
 
         id: index + 1,
-
         name: game.game_code || "Unknown",
-
         provider: (game.id_mapping_provider || "").toLowerCase(),
-
         image: game.image_src || "",
-
         category: "mostplay",
+        game_id: game.game_id,
+        game_code: game.game_code,
+        id_mapping_provider: game.id_mapping_provider,
+        url: game.url,
+        isProvider: false,
 
       })
     );
@@ -332,18 +361,13 @@ export async function fetchPageData(): Promise<void> {
     // ========================================
 
     const providersRaw = data.data_provider || [];
-
     realProviders = {};
 
     providersRaw.forEach((provider: any) => {
-
       const providerId = provider.id_mapping_provider;
-
       if (!providerId) return;
-
       const category =
         (provider.category || "slots").toLowerCase();
-
       if (!realProviders[category]) {
         realProviders[category] = [];
       }
@@ -353,23 +377,16 @@ export async function fetchPageData(): Promise<void> {
       providerSlugToId[slug] = providerId;
 
       realProviders[category].push({
-
         id: providerId,
-
         name: provider.provider_name || providerId,
-
         slug: slug,
-
         image:
           provider.image_url ||
           provider.image ||
           provider.logo ||
           "",
-
         flag: "🎮",
-
       });
-
     });
 
     console.log("Providers built:", realProviders);
@@ -382,31 +399,26 @@ export async function fetchPageData(): Promise<void> {
 
     realGames = gamesRaw.map(
       (game: any, index: number) => ({
-
         id: index + 1,
-
         name: game.game_code || "Unknown Game",
-
         provider: (game.id_mapping_provider || "").toLowerCase(),
-
         image: game.image_src || "",
-
-        category:
-          (game.category || "slots").toLowerCase(),
+        category:(game.category || "slots").toLowerCase(),
+        game_id: game.game_id,
+        game_code: game.game_code,
+        id_mapping_provider: game.id_mapping_provider,
+        url: game.url,
+        isProvider: false,
 
       })
     );
 
     console.log("Games built:", realGames);
-
     pagedataLoaded = true;
-
     console.log("Pagedata loaded successfully");
-
   })();
 
   return pagedataLoadingPromise;
-
 }
 
 
@@ -420,11 +432,8 @@ export async function fetchProvidersByCategory(
 ): Promise<ProviderData[]> {
 
   await fetchPageData();
-
   const mapped = CATEGORY_MAP[category.toLowerCase()];
-
   if (!mapped) return [];
-
   return realProviders[mapped] || [];
 
 }
@@ -440,9 +449,7 @@ export async function fetchGamesByCategoryAndProvider(
 ): Promise<Game[]> {
 
   await fetchPageData();
-
   const mapped = CATEGORY_MAP[category.toLowerCase()];
-
   if (!mapped) return [];
 
   // ============================
@@ -450,9 +457,7 @@ export async function fetchGamesByCategoryAndProvider(
   // ============================
 
   if (mapped === "mostplay") {
-
     return realMostPlay;
-
   }
 
   // ============================
@@ -460,25 +465,21 @@ export async function fetchGamesByCategoryAndProvider(
   // tampil provider sebagai game card
   // ============================
 
-  if (!provider) {
+  // if (!provider) {
 
-    const providers = realProviders[mapped] || [];
+  //   const providers = realProviders[mapped] || [];
 
-    return providers.map((p, index) => ({
+  //   return providers.map((p, index) => ({
 
-      id: index + 1,
+  //     id: index + 1,
+  //     name: p.name,
+  //     provider: p.slug,
+  //     image: p.image,
+  //     category: mapped,
 
-      name: p.name,
+  //   }));
 
-      provider: p.slug,
-
-      image: p.image,
-
-      category: mapped,
-
-    }));
-
-  }
+  // }
 
   // ============================
   // JIKA PROVIDER DIPILIH
@@ -656,7 +657,7 @@ export async function fetchGameList(
     "/getdata_listgame",
     "POST",
     {
-      branch_id: "GGCULOX",
+      branch_id: BRANCH_ID,
       category: normalizeCategoryAPI(categorySlug),
       filter: filter,
       id_mapping_provider: providerId,
@@ -676,12 +677,17 @@ export async function fetchGameList(
   console.log("GamesRaw length:", gamesRaw.length);
 
   const games = gamesRaw.map((game: any) => ({
-    id: `${providerSlug}_${game.id}`, // ✅ UNIQUE KEY
-    name: game.name,
-    provider: game.provider,
-    image: game.image,
-    category: game.category,
-  }));
+  id: `${providerSlug}_${game.id}`,
+  name: game.name,
+  provider: game.provider,
+  image: game.image,
+  category: game.category,
+
+  game_id: game.game_id,
+  game_code: game.game_code,
+  id_mapping_provider: game.id_mapping_provider,
+  url: game.url,
+}));
   
   console.log("Game raw sample:", gamesRaw[0]);
 
@@ -713,4 +719,19 @@ export function getPopup() {
 
 export function getMostPlay(): Game[] {
   return realMostPlay;
+}
+
+// ========================================
+// LAUNCH GAME PGSOFT
+// ========================================
+
+export async function launchGame(data: {
+  game_id: string;
+  game_code: string;
+  id_mapping_provider: string;
+  provider_name: string;
+  category: string;
+  type_game: string;
+}) {
+  return await apiRequest("/launchgame", "POST", data);
 }

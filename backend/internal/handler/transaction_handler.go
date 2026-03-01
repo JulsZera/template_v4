@@ -106,39 +106,66 @@ func DepositHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("DEPOSIT RESPONSE:", string(resp))
+
 	var result map[string]interface{}
 
 	if err := json.Unmarshal(resp, &result); err != nil {
-		response.Send(w, 500, "Invalid response from upstream", nil)
+		response.Send(w, 500, "Invalid upstream response", nil)
 		return
 	}
 
 	rcode, _ := result["rcode"].(string)
 	message, _ := result["message"].(string)
 
-	// 🔥 Jika gagal
 	if rcode != "00" {
 		response.Send(w, 400, message, result)
 		return
 	}
 
-	log.Println("DEPOSIT RESPONSE:", string(resp))
-
-	response.Send(w, 200, "Deposit success", resp)
+	response.Send(w, 200, message, result)
 }
 
 func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 
-	claims := r.Context().Value(middleware.UserContextKey).(*service.JWTClaims)
+	claims, ok := r.Context().Value(middleware.UserContextKey).(*service.JWTClaims)
+	if !ok {
+		response.Send(w, 401, "Unauthorized", nil)
+		return
+	}
 
 	token := claims.Token
 
-	var req model.WithdrawRequest
+	var req struct {
+		BranchID    string `json:"branch_id"`
+		Username    string `json:"username"`
+		Gameplayid  string `json:"gameplayid"`
+		Gameplaynum string `json:"gameplaynum"`
+		Wallet      string `json:"wallet_user"`
+		Amount      string `json:"amount"`
+		Description string `json:"description"`
+	}
 
 	err := json.NewDecoder(r.Body).Decode(&req)
-
 	if err != nil {
 		response.Send(w, 400, "Invalid request", nil)
+		return
+	}
+
+	log.Println("=== WD REQUEST RECEIVED ===")
+	log.Println("branch_id:", req.BranchID)
+	log.Println("username:", req.Username)
+	log.Println("gameplayid:", req.Gameplayid)
+	log.Println("gameplaynum:", req.Gameplaynum)
+	log.Println("wallet_user:", req.Wallet)
+	log.Println("amount:", req.Amount)
+	log.Println("Desc:", req.Description)
+
+	// 🔥 Validasi
+	if req.BranchID == "" || req.Username == "" ||
+		req.Gameplayid == "" || req.Gameplaynum == "" ||
+		req.Wallet == "" || req.Amount == "" {
+		response.Send(w, 400, "Missing required fields", nil)
 		return
 	}
 
@@ -148,16 +175,25 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 		token,
 	)
 
+	log.Println("WD RESPONSE:", string(resp))
+
 	if err != nil {
 		response.Send(w, 500, err.Error(), nil)
 		return
 	}
 
-	var result interface{}
-
+	var result map[string]interface{}
 	json.Unmarshal(resp, &result)
 
-	response.Send(w, 200, "Withdraw success", result)
+	rcode, _ := result["rcode"].(string)
+	message, _ := result["message"].(string)
+
+	if rcode != "00" {
+		response.Send(w, 400, message, result)
+		return
+	}
+
+	response.Send(w, 200, message, result)
 }
 
 func AddBankHandler(w http.ResponseWriter, r *http.Request) {

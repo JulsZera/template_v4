@@ -1,53 +1,44 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { ArrowLeft } from "lucide-react";
+import { useUser } from "@/context/UserContext";
+import { apiRequest } from "@/services/api";
 
 export default function Promo() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
+  const [promos, setPromos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useUser();
 
-  const promoItems = [
-    {
-      icon: "🎉",
-      title: t("announcement"),
-      description: "Dapatkan bonus dan promosi spesial hari ini",
-    },
-    {
-      icon: "💰",
-      title: t("free_spins"),
-      description: "Menang besar dengan putaran gratis",
-    },
-    {
-      icon: "🎁",
-      title: t("promotion_bonus"),
-      description: "Bonus 50% untuk semua game setiap hari",
-    },
-    {
-      icon: "⭐",
-      title: t("welcome_bonus"),
-      description: "Dapatkan 100 poin gratis sebagai bonus selamat datang",
-    },
-    {
-      icon: "💎",
-      title: "Exclusive Rewards",
-      description: "Kumpulkan poin dan tukarkan dengan hadiah menarik",
-    },
-    {
-      icon: "🏆",
-      title: "VIP Program",
-      description: "Nikmati benefit eksklusif sebagai member VIP",
-    },
-    {
-      icon: "🎊",
-      title: "Weekly Contest",
-      description: "Ikuti kontes mingguan dan menangkan hadiah besar",
-    },
-    {
-      icon: "🚀",
-      title: "Flash Deal",
-      description: "Penawaran terbatas dengan bonus fantastis",
-    },
-  ];
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchPromo = async () => {
+      setLoading(true);
+
+      console.log("USER IN PROMO:", user);
+      console.log("JWT IN PROMO:", localStorage.getItem("jwt"));
+
+      const res = await apiRequest("/get-promotion", "POST", {
+        branch_id: BRANCH_ID,
+        username: user.username,
+      });
+
+      console.log("BRANCH_ID :", BRANCH_ID)
+      console.log("USERNAME : ",user.username)
+
+      if (res?.rcode === "00") {
+        setPromos(res.data ?? []);
+      }
+
+      setLoading(false);
+    };
+
+    fetchPromo();
+  }, [user]);
 
   return (
     <div className="w-screen min-h-screen pb-24 md:pb-0 relative overflow-x-hidden" style={{ backgroundColor: "#F1C8D6" }}>
@@ -69,23 +60,46 @@ export default function Promo() {
       <div className="px-4 py-6 max-w-6xl mx-auto">
         {/* Promo Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {promoItems.map((promo, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all transform hover:scale-105"
-            >
-              <div className="text-4xl mb-3">{promo.icon}</div>
-              <h3 className="text-lg font-bold text-gray-800 mb-2">
-                {promo.title}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {promo.description}
-              </p>
-              <button className="mt-4 w-full bg-gradient-to-r from-pink-400 to-pink-300 hover:from-pink-500 hover:to-pink-400 text-white font-bold py-2 rounded-lg transition-all">
-                {t("play")}
-              </button>
-            </div>
-          ))}
+          {loading ? (
+              <div className="col-span-full text-center py-10">
+                <p className="text-gray-600">Loading promo...</p>
+              </div>
+            ) : promos.length === 0 ? (
+              <div className="col-span-full text-center py-10">
+                <p className="text-gray-600">Belum ada promo tersedia</p>
+              </div>
+            ) : (
+              promos.map((promo, idx) => (
+              <div
+                key={idx}
+                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all transform hover:scale-105"
+              >
+                {/* IMAGE */}
+                <img
+                  src={promo.image_url}
+                  alt={promo.name}
+                  className="w-full h-48 object-cover"
+                />
+
+                <div className="p-5">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">
+                    {promo.name}
+                  </h3>
+
+                  <div
+                    className="text-sm text-gray-600 line-clamp-3"
+                    dangerouslySetInnerHTML={{ __html: promo.description }}
+                  />
+
+                  <button
+                    onClick={() => navigate("/deposit")}
+                    className="mt-4 w-full bg-gradient-to-r from-pink-400 to-pink-300 hover:from-pink-500 hover:to-pink-400 text-white font-bold py-2 rounded-lg transition-all"
+                  >
+                    {t("play")}
+                  </button>
+                </div>
+              </div>
+          )))}
         </div>
 
         {/* Banner Section */}

@@ -12,12 +12,13 @@ interface UserData {
 
   level?: string;
 
-  tierId?: string;
+  id_tier?: string;
   tierName?: string;
   tierImage?: string;
 
   balance: number;
   idr_balance: string;
+  type_wallet : string;
 
   referralCode?: string;
 
@@ -56,13 +57,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    console.log("LOGOUT DIPANGGIL");
     localStorage.removeItem("jwt");
+    localStorage.removeItem("userData");
     localStorage.removeItem("username");
     setUser(null);
-    setAuthLoading(false); // 🔥 tambahkan ini
+    setPendingTransactions([]);
     };
-    // console.log("AUTH LOADING:", authLoading);
-    // console.log("USER:", user);
 
   return (
     <UserContext.Provider value={{user, 

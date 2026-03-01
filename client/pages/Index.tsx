@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useLanguage, Language } from "@/context/LanguageContext";
-import { fetchProvidersByCategory, fetchGamesByCategoryAndProvider, ProviderData, Game } from "@/services/api";
+import { fetchProvidersByCategory, fetchGamesByCategoryAndProvider, ProviderData, Game, getBalance, launchGame } from "@/services/api";
 import { Wallet, Home, Zap, TrendingUp, Gift, Menu, X, Eye, EyeOff, LogOut, Search, Settings, Globe } from "lucide-react";
 import { fetchPageData } from "@/services/api";
 import { apiRequest } from "@/services/api";
@@ -12,8 +12,6 @@ import { getBanners } from "@/services/api";
 import { getBankStatus } from "@/services/api";
 import { getSEO } from "@/services/api";
 import { getPopup } from "@/services/api";
-import { getProfile, getBalance } from "@/services/api";
-import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
 import { useUser } from "@/context/UserContext";
 
@@ -54,6 +52,7 @@ export default function Index() {
   const [animatePopup, setAnimatePopup] = useState(false);
   const [currentPopupData, setCurrentPopupData] = useState<any>(null);
   const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // useEffect(() => {
   //   console.log("USER DI INDEX:", user);
@@ -262,6 +261,8 @@ const handleSignIn = async (e: React.FormEvent) => {
     if (res.status) {
       const jwt = res.data.jwt;
 
+      console.log("JWT :", jwt)
+
       localStorage.setItem("jwt", jwt);
       setJwtToken(jwt);
 
@@ -275,24 +276,21 @@ const handleSignIn = async (e: React.FormEvent) => {
       const hasPendingDeposit = pendingData.length > 0;
       const balanceData = balanceRes?.data?.data;
 
-      const loginData = res.data?.data ?? res.data;
       const decoded = parseJwt(jwt);
        console.log("DECODED JWT:", decoded); // 👈 TARUH DI SINI
       
       const userData = {
-        // username: loginPhone,
-        // gameplayid: "",
-        // gameplaynum: "",
-        // sessionToken: "",
 
         username: decoded?.username || loginPhone,
         gameplayid: decoded?.gameplayid || "",
         gameplaynum: decoded?.gameplaynum || "",
         sessionToken: decoded?.token || "",
-        tierid: decoded?.tierId || "",
+        // id_tier: decoded?.id_tier || "",
 
+        id_tier: balanceData.id_tier,
         balance: Number(balanceData.balance),
         idr_balance: balanceData.idr_balance,
+        type_wallet: balanceData.type_wallet,
         tierName: balanceData.name_tier,
         tierImage: balanceData.tier_image,
         referralCode: profileRes?.data?.refferal_code,
@@ -308,14 +306,14 @@ const handleSignIn = async (e: React.FormEvent) => {
       console.log("SET USER SUCCESS");
       setShowSignInModal(false);
 
-      toast.success("Login berhasil 🎉");
+      toast.success("Login berhasil 🎉")
     } else {
       setLoginError("Login gagal");
-      toast.error("Login gagal");
+      toast.error("Login Gagal !")
     }
   } catch (err) {
     setLoginError("Server error");
-    toast.error("Server error");
+    toast.error("Server Error")
   } finally {
     setLoginLoading(false);
   }
@@ -335,6 +333,8 @@ useEffect(() => {
 }, [user]);
 
 const processBalanceResponse = (res: any) => {
+  if (!user) return; 
+
   const balanceData = res?.data?.data;
   const pendingData = res?.data?.data_pending ?? [];
 
@@ -358,7 +358,7 @@ const processBalanceResponse = (res: any) => {
       ((approveFlag === "1" || approveFlag === "2") &&
         popupFlag === "1");
 
-    if (!shouldShow) continue;
+    if (!shouldShow || showPendingPopup) continue;
 
     // 🔥 GUARD ANTI DOUBLE POPUP
     if (
@@ -368,7 +368,13 @@ const processBalanceResponse = (res: any) => {
       break;
     }
 
-    setCurrentPopupData(trx);
+    setCurrentPopupData({
+      ...trx,
+      label:
+        trx.transaction_type === "1"
+          ? "Withdraw"
+          : "Deposit"
+    });
     setShowPendingPopup(true);
     setAnimatePopup(true);
     break;
@@ -379,7 +385,9 @@ useEffect(() => {
   if (!user) return;
 
   const interval = setInterval(async () => {
+    if (!localStorage.getItem("jwt")) return;  // 🔥 guard kedua
     const res = await getBalance();
+    if (!res) return;
     processBalanceResponse(res);
   }, 5000);
 
@@ -587,14 +595,6 @@ useEffect(() => {
 
   const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
   const [angpaos, setAngpaos] = useState<Array<{ id: number; left: number; delay: number; duration: number; type: 'angpao' | 'sakura' }>>([]);
-
-  // Rotate announcements
-  // useEffect(() => {
-  //   const announcementInterval = setInterval(() => {
-  //     setCurrentAnnouncementIndex((prev) => (prev + 1) % getAnnouncements().length);
-  //   }, 90000);
-  //   return () => clearInterval(announcementInterval);
-  // }, [language]);
   const announcements = getAnnouncements();
 
   useEffect(() => {
@@ -677,17 +677,70 @@ useEffect(() => {
   };
 
   const handleLogout = () => {
-    logout(); // 🔥 panggil context
+    console.log("CLICK LOGOUT");
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    setShowMenu(false);
+    logout();
+    navigate("/");
     toast("Logout berhasil 👋");
   };
+
+  const handleLaunchGame = async (game: any) => {
+  if (!user) {
+    toast.error("Silakan login dulu");
+    return;
+  }
+
+  try {
+    const payload = {
+      game_id: game.game_id,
+      game_code: game.game_code,
+      id_mapping_provider: game.id_mapping_provider,
+      provider_name: game.provider,
+      category: game.category,
+      type_game: "0",
+    };
+
+    const res = await launchGame(payload);
+
+    console.log("RCODE :", res)
+
+    if (res?.status === true) {
+
+      const providerData = res.data;
+
+      // 🔥 CASE URL
+      if (providerData?.status === "URL" && typeof providerData.data === "string") {
+        window.open(providerData.data, "_blank");
+        return;
+      }
+
+      // 🔥 CASE HTML
+      if (providerData?.status === "HTML" && typeof providerData.data === "string") {
+        const newWindow = window.open("", "_blank");
+        newWindow?.document.write(providerData.data);
+        newWindow?.document.close();
+        return;
+      }
+
+    } else {
+      toast.error(res?.message || "Gagal membuka game");
+    }
+
+  } catch (err) {
+    toast.error("Terjadi kesalahan saat membuka game");
+  }
+};
 
   // if (authLoading) return null;
   // console.log("RENDER USER:", user);
   // LOGGED OUT VIEW
   if (!user) {
   return (
-    <>
-    <Toaster position="top-center" reverseOrder={false} />
       <div className="w-screen min-h-screen pb-24 md:pb-0 relative overflow-x-hidden" style={{ backgroundColor: "#F1C8D6" }}>
         {/* Header */}
         <header className="sticky top-0 z-40 shadow-lg" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}>
@@ -944,6 +997,7 @@ useEffect(() => {
                 {searchedGames.slice(0, visibleCount).map((game, idx) => (
                   <div
                     key={game.id}
+                    onClick={() => handleLaunchGame(game)}
                     className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 group"
                     style={{
                       backgroundImage: `url(${game.image})`,
@@ -1049,6 +1103,7 @@ useEffect(() => {
                     {searchedGames.slice(0, visibleCount).map((game, idx) => (
                       <div
                         key={game.id}
+                        onClick={() => handleLaunchGame(game)}
                         className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 group"
                         style={{
                           backgroundImage: `url(${game.image})`,
@@ -1964,14 +2019,11 @@ useEffect(() => {
           }
         `}</style>
       </div>
-    </>
     );
   }
 
   // LOGGED IN VIEW
   return (
-    <>
-    <Toaster position="top-center" reverseOrder={false} />
     <div className="w-screen min-h-screen pb-24 md:pb-0 relative overflow-x-hidden" style={{ backgroundColor: "#F1C8D6" }}>
       {/* Header */}
       <header className="sticky top-0 z-40 shadow-lg" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}>
@@ -1992,7 +2044,7 @@ useEffect(() => {
           {/* Username and Balance (center) */}
           <div className="flex flex-col items-center gap-0 flex-1 min-w-0">
             <span className="text-white font-bold text-xs">
-              {user?.username || JSON.parse(localStorage.getItem("userData") || "{}")?.username || "-"}
+              {user?.username ?? "-"}
             </span>
             <span className="text-white font-bold text-xs">{user ? user.idr_balance : "-"}</span>
           </div>
@@ -2276,6 +2328,7 @@ useEffect(() => {
                 {searchedGames.slice(0, visibleCount).map((game, idx) => (
                   <div
                     key={game.id}
+                    onClick={() => handleLaunchGame(game)}
                     className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 group"
                     style={{
                       backgroundImage: `url(${game.image})`,
@@ -2381,6 +2434,7 @@ useEffect(() => {
                     {searchedGames.slice(0, visibleCount).map((game, idx) => (
                       <div
                         key={game.id}
+                        onClick={() => handleLaunchGame(game)}
                         className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 group"
                         style={{
                           backgroundImage: `url(${game.image})`,
@@ -2465,7 +2519,11 @@ useEffect(() => {
               <div className="bg-black/40 rounded-xl p-4 mb-3 border border-yellow-600">
                 <div className="flex justify-between items-center mb-2">
                   <div>
-                    <p className="font-bold">Deposit</p>
+                    <p className="font-bold">
+                      {currentPopupData?.transaction_type === "1"
+                        ? "Withdraw"
+                        : "Deposit"}
+                    </p>
                     <p className="text-sm font-bold">
                       {currentPopupData.flag_approve === "0" && "Pending"}
                       {currentPopupData.flag_approve === "1" && "Disetujui"}
@@ -3328,6 +3386,5 @@ useEffect(() => {
         }
       `}</style>
     </div>
-    </>
   );
 }

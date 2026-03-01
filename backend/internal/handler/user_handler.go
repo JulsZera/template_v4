@@ -139,14 +139,23 @@ func GetWalletHandler(w http.ResponseWriter, r *http.Request) {
 
 func GetHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
-	claims := r.Context().Value(middleware.UserContextKey).(*service.JWTClaims)
+	claims, ok := r.Context().Value(middleware.UserContextKey).(*service.JWTClaims)
+	if !ok {
+		response.Send(w, 401, "Unauthorized", nil)
+		return
+	}
 
 	token := claims.Token
 
-	var req model.HistoryRequest
+	var req struct {
+		BranchID  string `json:"branch_id"`
+		Username  string `json:"username"`
+		StartDate string `json:"start_date"`
+		EndDate   string `json:"end_date"`
+		Type      string `json:"type"`
+	}
 
 	err := json.NewDecoder(r.Body).Decode(&req)
-
 	if err != nil {
 		response.Send(w, 400, "Invalid request", nil)
 		return
@@ -157,15 +166,21 @@ func GetHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		req,
 		token,
 	)
-
 	if err != nil {
 		response.Send(w, 500, err.Error(), nil)
 		return
 	}
 
-	var result interface{}
-
+	var result map[string]interface{}
 	json.Unmarshal(resp, &result)
+
+	rcode, _ := result["rcode"].(string)
+	message, _ := result["message"].(string)
+
+	if rcode != "00" {
+		response.Send(w, 400, message, result)
+		return
+	}
 
 	response.Send(w, 200, "Success", result)
 }

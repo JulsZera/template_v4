@@ -6,7 +6,8 @@ import { useUser } from "@/context/UserContext";
 import { apiRequest, uploadWithProgress } from "@/services/api";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
-import { Copy } from "lucide-react";
+import { Braces, Copy } from "lucide-react";
+import { build } from "vite";
 
 type Tab = "deposit" | "withdraw" | "history";
 type PaymentMethod = "qris" | "bank_transfer" | "e_wallet" | "pulsa" | null;
@@ -70,8 +71,6 @@ const Banking = () => {
   const [receiptFileName, setReceiptFileName] = useState("");
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
   const [withdrawalBank, setWithdrawalBank] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [transactionType, setTransactionType] = useState("");
   const { user, updateBalance, setUser  } = useUser();
   const [adminWallets, setAdminWallets] = useState<AdminWallet[]>([]);
@@ -81,6 +80,7 @@ const Banking = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const { pendingTransactions } = useUser();
   const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
+
 
 useEffect(() => {
   if (!user?.username) return;
@@ -111,15 +111,15 @@ useEffect(() => {
 }, []);
 
 useEffect(() => {
-  if (!user?.tierId) return;
+  if (!user?.id_tier) return;
 
   const loadBanking = async () => {
     const res = await apiRequest("/check-wallet", "POST", {
       branch_id: BRANCH_ID,
       username: user.username,
       transaction_type: "3",
-      id_tier: user.tierId,
-      type_wallet: "1"
+      id_tier: user.id_tier,
+      type_wallet: user.type_wallet
     });
 
     if (res?.rcode === "00") {
@@ -132,7 +132,7 @@ useEffect(() => {
   };
 
   loadBanking();
-}, [user?.tierId]);
+}, [user?.id_tier]);
 
   // Handle file upload
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -142,22 +142,13 @@ useEffect(() => {
 
     // max 2MB
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Ukuran file maksimal 2MB");
+      toast.error("Ukuran file maksimal 2MB")
       return;
     }
 
     setReceiptFile(file);
     setReceiptFileName(file.name);
     setPreviewImage(URL.createObjectURL(file));
-  };
-
-
-  const handleWithdrawalSubmit = () => {
-    alert("Permintaan penarikan submitted!");
-  };
-
-  const handleSearchHistory = () => {
-    alert("Searching history...");
   };
 
   const handleResetFilter = () => {
@@ -176,14 +167,14 @@ useEffect(() => {
 //========= FILTER ==========//
 
  const filteredAdmin = useMemo(() => {
-  if (!user?.tierId) return [];
+  if (!user?.id_tier) return [];
 
   return adminWallets.filter(
     w =>
-      w.id_wallet_admin === user.tierId &&
+      w.id_wallet_admin === user.id_tier &&
       w.online === "1"
   );
-}, [adminWallets, user?.tierId]);
+}, [adminWallets, user?.id_tier]);
 
  const bankTransfer = useMemo(
   () => filteredAdmin.filter(w => w.type_wallet === "1"),
@@ -289,11 +280,14 @@ useEffect(() => {
   const loadPromo = async () => {
     setLoadingPromo(true);
 
-    const res = await apiRequest("/get-promotion", "POST", {
+    const res = await apiRequest("/get-promotion-user", "POST", {
       branch_id: BRANCH_ID,
       type_promo: "4",
-      type_wallet: selectedPaymentMethod === "bank_transfer" ? "1" : "4"
+      type_wallet: user.type_wallet
     });
+
+    console.log("BRANCH ID:",BRANCH_ID)
+    console.log("TW :",user.type_wallet)
 
     if (res?.rcode === "00") {
       setPromos(res.data || []);
@@ -321,9 +315,9 @@ const totalReceived = amount + bonusAmount;
 const handleCopy = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text);
-    toast.success("Berhasil disalin");
+    toast.success("Berhasil disalin")
   } catch (err) {
-    toast.error("Gagal menyalin");
+    toast.error("Gagal menyalin")
   }
 };
 
@@ -337,19 +331,19 @@ const handleCopy = async (text: string) => {
     navigate("/");
   };
 
-//=========== DEPOSIT CLICK ============//
+//============ DEPOSIT CLICK ============//
 const [depositLoading, setDepositLoading] = useState(false);
 
 const handleDepositClick = async () => {
   if (depositLoading) return;
   try {
     if (!selectedDestinationBank) {
-      toast.error("Pilih rekening tujuan dulu");
+      toast.error("Pilih rekening tujuan dulu")
       return;
     }
 
     if (!depositAmount) {
-      toast.error("Masukkan jumlah deposit");
+      toast.error("Masukan jumlah deposit")
       return;
     }
 
@@ -404,7 +398,7 @@ const handleDepositClick = async () => {
 
 
     if (res.status) {
-      toast.success("Deposit berhasil dikirim 🎉");
+      toast.success("Deposit berhasil dikirim 🎉")
 
       // reset form
       setUploadProgress(0);
@@ -418,11 +412,11 @@ const handleDepositClick = async () => {
       navigate("/");
 
     } else {
-      toast.error(res.message || "Deposit gagal");
+      toast.error(res.message || "Deposit gagal")
     }
 
   } catch (err) {
-    toast.error(err);
+    toast.error(err)
     console.log("Error :", err)
   } finally {
     setDepositLoading(false);
@@ -431,6 +425,146 @@ const handleDepositClick = async () => {
 
 const hasPending = pendingTransactions.some(
   (trx) => String(trx.flag_approve) === "0"
+);
+
+//============ WITHDRAW ===========//
+const [withdrawLoading, setWithdrawLoading] = useState(false);
+
+const handleWithdrawClick = async () => {
+  if (!user) return;
+  if (withdrawLoading) return;
+
+  try {
+    // 🔥 VALIDASI BANK
+    if (!selectedBankData) {
+      toast.error("Pilih rekening tujuan terlebih dahulu")
+      return;
+    }
+
+    // 🔥 VALIDASI NOMINAL
+    if (!withdrawalAmount) {
+      toast.error("Masukkan nominal penarikan")
+      return;
+    }
+
+    const amountNumber = Number(withdrawalAmount);
+
+    if (isNaN(amountNumber)) {
+      toast.error("Nominal harus berupa angka")
+      return;
+    }
+
+    if (amountNumber > user.balance) {
+      toast.error("Saldo tidak mencukupi")
+      return;
+    }
+
+    if (amountNumber < 50000) {
+      toast.error("Minimal penarikan IDR 50.000")
+      return;
+    }
+
+    // 🔥 CEK ADA PENDING
+    const hasPending = pendingTransactions.some(
+      (trx) => String(trx.flag_approve) === "0"
+    );
+
+    if (hasPending) {
+      toast.error("Masih ada transaksi pending")
+      return;
+    }
+
+    setWithdrawLoading(true);
+
+    const walletString = `${selectedBankData.id_wallet};${selectedBankData.account_name};${selectedBankData.bank_name};${selectedBankData.account_number};${selectedBankData.type_wallet}`;
+
+    console.log("=== WITHDRAW BODY ===");
+    console.log({
+      branch_id: BRANCH_ID,
+      username: user.username,
+      gameplayid: user.gameplayid,
+      gameplaynum: user.gameplaynum,
+      wallet_user: walletString,
+      amount: amountNumber,
+      description: ""
+    });
+
+    const res = await apiRequest("/withdraw", "POST", {
+      branch_id: BRANCH_ID,
+      username: user.username,
+      gameplayid: user.gameplayid,
+      gameplaynum: user.gameplaynum,
+      wallet_user: walletString,
+      amount: String(amountNumber),
+      description: ""
+    });
+
+    if (res.status) {
+      toast.success("Penarikan berhasil dikirim 💸")
+      setWithdrawalAmount("");
+      navigate("/");
+    } else {
+      toast.error(res.message || "Gagal lakukan penarikan")
+    }
+
+  } catch (err) {
+    console.log("Withdraw Error:", err);
+    toast.error("Terjadi kesalahan sistem")
+  } finally {
+    setWithdrawLoading(false);
+  }
+};
+
+//=========== History ============//
+
+useEffect(() => {
+  if (activeTab === "history") {
+    handleSearchHistory();
+  }
+}, [activeTab]);
+
+const formatStartDate = (date: string) =>
+  `${date} 00:00:00`;
+
+const formatEndDate = (date: string) =>
+  `${date} 23:59:59`;
+
+const handleSearchHistory = async () => {
+  if (!user) return;
+
+  const res = await apiRequest("/history", "POST", {
+    branch_id: BRANCH_ID,
+    username: user.username,
+    start_date: formatStartDate(startDate),
+    end_date: formatEndDate(endDate),
+    type: transactionType // all / deposit / withdraw
+  });
+
+  console.log(res)
+
+  if (res.status) {
+    setHistoryData(res.data?.data ?? []);
+    setCurrentPage(1);
+  } else {
+    toast.error(res.message || "Gagal ambil history")
+  }
+};
+
+const [historyData, setHistoryData] = useState<any[]>([]);
+
+const [currentPage, setCurrentPage] = useState(1);
+const itemsPerPage = 5;
+
+const today = new Date().toISOString().split("T")[0];
+
+const [startDate, setStartDate] = useState(today);
+const [endDate, setEndDate] = useState(today);
+
+const totalPages = Math.ceil(historyData.length / itemsPerPage);
+
+const paginatedData = historyData.slice(
+  (currentPage - 1) * itemsPerPage,
+  currentPage * itemsPerPage
 );
 
   return (
@@ -1247,16 +1381,11 @@ const hasPending = pendingTransactions.some(
                   </div>
 
                   <button
-                    onClick={handleWithdrawalSubmit}
-                    disabled={depositLoading || hasPending}
-                    className="w-full py-2 rounded-lg font-bold text-black disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: "#f5d77a" }}
+                    onClick={handleWithdrawClick}
+                    disabled={withdrawLoading}
+                    className="w-full py-2 rounded-lg font-bold text-black disabled:opacity-50"
                   >
-                    {hasPending
-                      ? "Masih ada transaksi pending"
-                      : depositLoading
-                      ? "Memproses..."
-                      : "Konfirmasi Transaksi"}
+                    {withdrawLoading ? "Memproses..." : "Konfirmasi Withdraw"}
                   </button>
                 </div>
               </div>
@@ -1273,9 +1402,9 @@ const hasPending = pendingTransactions.some(
                 <div className="text-2xl">📜</div>
                 <div>
                   <h2 className="text-lg font-bold" style={{ color: COLORS.primary.main }}>
-                    {t("withdrawal_history")}
+                    {t("history_transaction")}
                   </h2>
-                  <p className="text-xs text-gray-600">Lihat semua transaksi Anda</p>
+                  <p className="text-xs text-gray-600">{t("history_transaction_span")}</p>
                 </div>
               </div>
             </div>
@@ -1286,52 +1415,54 @@ const hasPending = pendingTransactions.some(
                 <div className="text-2xl">🔍</div>
                 <div>
                   <h3 className="text-sm font-bold" style={{ color: COLORS.primary.main }}>
-                    Filter Transaksi
+                    {t("filter_transaction")}
                   </h3>
-                  <p className="text-xs text-gray-600">Pilih periode dan jenis transaksi untuk melihat riwayat</p>
+                  <p className="text-xs text-gray-600">
+                    {t("filter_transaction_span")}
+                  </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div>
                   <label className="text-xs font-bold block mb-1" style={{ color: COLORS.primary.main }}>
-                    Tanggal Mulai
+                    {t("start_date")}
                   </label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none text-xs"
+                    className="text-black w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none text-xs"
                     style={{ borderColor: COLORS.primary.light }}
                   />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold block mb-1" style={{ color: COLORS.primary.main }}>
-                    Tanggal Akhir
+                    {t("finish_date")}
                   </label>
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none text-xs"
+                    className="text-black w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none text-xs"
                     style={{ borderColor: COLORS.primary.light }}
                   />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold block mb-1" style={{ color: COLORS.primary.main }}>
-                    Jenis Transaksi
+                    {t("type_transaction")}
                   </label>
                   <select
                     value={transactionType}
                     onChange={(e) => setTransactionType(e.target.value)}
-                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none text-xs"
+                    className="text-black w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:outline-none text-xs"
                     style={{ borderColor: COLORS.primary.light }}
                   >
-                    <option value="">Semua Transaksi</option>
+                    <option value="all">Semua Transaksi</option>
                     <option value="deposit">Deposit</option>
-                    <option value="withdrawal">Penarikan</option>
+                    <option value="withdraw">Penarikan</option>
                   </select>
                 </div>
 
@@ -1341,57 +1472,156 @@ const hasPending = pendingTransactions.some(
                     className="w-full py-2 rounded-lg font-bold text-white text-xs transition-all hover:shadow-lg"
                     style={{ backgroundColor: COLORS.secondary.orange }}
                   >
-                    Cari History
+                    {t("search_history")}
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Results Section */}
-            <div className="bg-white rounded-xl p-4 shadow-md border-2" style={{ borderColor: COLORS.primary.light }}>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="text-2xl">📋</div>
-                <div>
-                  <h3 className="text-sm font-bold" style={{ color: COLORS.primary.main }}>
-                    Hasil Pencarian
-                  </h3>
-                  <p className="text-xs text-gray-600">0 transaksi ditemukan</p>
+              <div className="bg-white rounded-xl p-4 shadow-md border-2" style={{ borderColor: COLORS.primary.light }}>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="text-2xl">📋</div>
+                  <div>
+                    <h3 className="text-sm font-bold" style={{ color: COLORS.primary.main }}>
+                      {t("history_result")}
+                    </h3>
+                    <p className="text-xs text-gray-600">
+                      {historyData.length} {t("find_transaction")}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Empty State */}
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="text-5xl mb-4" style={{ color: COLORS.primary.main }}>
-                  ⏰
-                </div>
-                <p className="font-bold text-sm text-gray-700 mb-2">
-                  Tidak ada transaksi ditemukan
-                </p>
-                <p className="text-xs text-gray-600 text-center mb-6">
-                  Coba ubah filter atau tanggal pencarian untuk melihat riwayat transaksi
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleResetFilter}
-                    className="px-6 py-2 rounded-lg font-bold text-sm transition-all border-2"
-                    style={{
-                      borderColor: COLORS.primary.main,
-                      color: COLORS.primary.main,
-                      backgroundColor: "white"
-                    }}
-                  >
-                    Reset Filter
-                  </button>
-                  <button
-                    onClick={handleSearchHistory}
-                    className="px-6 py-2 rounded-lg font-bold text-white text-sm transition-all hover:shadow-lg"
-                    style={{ backgroundColor: COLORS.secondary.orange }}
-                  >
-                    Coba Lagi
-                  </button>
-                </div>
+                {/* 🔥 JIKA ADA DATA */}
+                {historyData.length > 0 ? (
+                  <div className="space-y-3">
+                    {paginatedData.map((trx: any) => (
+                      <div
+                        key={trx.txid}
+                        className="border rounded-lg p-3 hover:shadow-md transition-all"
+                        style={{ borderColor: COLORS.primary.light }}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p
+                              className="font-bold text-sm capitalize"
+                              style={{ color: COLORS.primary.main }}
+                            >
+                              {trx.source}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {trx.datetime}
+                            </p>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="font-bold text-sm">
+                              {trx.amount}
+                            </p>
+
+                            <p
+                              className={`text-xs font-bold ${
+                                trx.flag_approve === "0"
+                                  ? "text-yellow-500"
+                                  : trx.flag_approve === "1"
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }`}
+                            >
+                              {trx.flag_approve === "0"
+                                ? "Pending"
+                                : trx.flag_approve === "1"
+                                ? "Disetujui"
+                                : "Ditolak"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <p>
+                            <span className="font-bold">TXID:</span> {trx.txid}
+                          </p>
+
+                          <p>
+                            <span className="font-bold">Bank:</span>{" "}
+                            {trx.jenisbank_client}
+                          </p>
+
+                          {trx.description && trx.description !== "-" && (
+                            <p>
+                              <span className="font-bold">Keterangan:</span>{" "}
+                              {trx.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center mt-6 gap-2">
+                        <button
+                          disabled={currentPage === 1}
+                          onClick={() => setCurrentPage(prev => prev - 1)}
+                          className="px-3 py-1 rounded border text-xs"
+                        >
+                          Prev
+                        </button>
+
+                        <span className="text-xs font-bold px-3 py-1">
+                          {currentPage} / {totalPages}
+                        </span>
+
+                        <button
+                          disabled={currentPage === totalPages}
+                          onClick={() => setCurrentPage(prev => prev + 1)}
+                          className="px-3 py-1 rounded border text-xs"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* 🔥 EMPTY STATE */
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div
+                      className="text-5xl mb-4"
+                      style={{ color: COLORS.primary.main }}
+                    >
+                      ⏰
+                    </div>
+
+                    <p className="font-bold text-sm text-gray-700 mb-2">
+                      Tidak ada transaksi ditemukan
+                    </p>
+
+                    <p className="text-xs text-gray-600 text-center mb-6">
+                      Coba ubah filter atau tanggal pencarian untuk melihat riwayat transaksi
+                    </p>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleResetFilter}
+                        className="px-6 py-2 rounded-lg font-bold text-sm transition-all border-2"
+                        style={{
+                          borderColor: COLORS.primary.main,
+                          color: COLORS.primary.main,
+                          backgroundColor: "white"
+                        }}
+                      >
+                        Reset Filter
+                      </button>
+
+                      <button
+                        onClick={handleSearchHistory}
+                        className="px-6 py-2 rounded-lg font-bold text-white text-sm transition-all hover:shadow-lg"
+                        style={{ backgroundColor: COLORS.secondary.orange }}
+                      >
+                        Coba Lagi
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
           </div>
         )}
       </div>

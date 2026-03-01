@@ -1,12 +1,8 @@
 import "./global.css";
-
-
 import { useEffect } from "react";
 import { useUser } from "@/context/UserContext";
 import { apiRequest } from "@/services/api";
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "react-hot-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -30,14 +26,13 @@ const { setUser, setAuthLoading, authLoading } = useUser();
     const savedUser = localStorage.getItem("userData");
 
     if (!jwt || !savedUser) {
+      setUser(null);
       setAuthLoading(false);
       return;
     }
 
-    const parsedUser = JSON.parse(savedUser);
-
-    // 🔥 langsung pakai data login yang sudah disimpan
-    setUser(parsedUser);
+    // // 🔥 langsung pakai data login yang sudah disimpan
+    // setUser(parsedUser);
 
     try {
 
@@ -45,15 +40,21 @@ const { setUser, setAuthLoading, authLoading } = useUser();
       const balanceRes = await apiRequest("/balance", "POST");
 
       const balanceData = balanceRes?.data?.data;
+      const parsedUser = JSON.parse(savedUser);
+      
       console.log("RESTORE SESSION START");
       console.log("JWT:", jwt);
       console.log("SAVED USER:", savedUser);
+      console.log("PROFILE RES :", profileRes)
+      console.log("BALANCE RES :", balanceRes)
 
       const updatedUser = {
         ...parsedUser, // 🔥 JANGAN HAPUS USERNAME
 
         balance: Number(balanceData.balance),
         idr_balance: balanceData.idr_balance,
+        type_wallet: balanceData.type_wallet,
+        id_tier: balanceData.id_tier,
         tierName: balanceData.name_tier,
         tierImage: balanceData.tier_image,
         referralCode: profileRes?.data?.refferal_code,
@@ -80,8 +81,7 @@ if (authLoading) return null;
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
-          <Toaster />
-          <Sonner />
+          <Toaster position="top-center" reverseOrder={false} />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
