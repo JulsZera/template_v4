@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useLanguage, Language } from "@/context/LanguageContext";
-import { fetchProvidersByCategory, fetchGamesByCategoryAndProvider, ProviderData, Game } from "@/services/api";
+import { fetchProvidersByCategory, ProviderData, Game } from "@/services/api";
 import { Wallet, Home, Zap, TrendingUp, Gift, Menu, X, Eye, EyeOff, LogOut, Search, Settings, Globe } from "lucide-react";
 import { fetchPageData } from "@/services/api";
 import { apiRequest } from "@/services/api";

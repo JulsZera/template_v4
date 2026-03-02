@@ -7,7 +7,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var APP_PORT string
+var LISTEN_ADDR string
 var API_BASE_URL string
 var CLIENT_API_KEY string
 var JWT_SECRET string
@@ -25,7 +25,6 @@ func LoadEnv() {
 		log.Println("No .env file found")
 	}
 
-	APP_PORT = getEnv("APP_PORT", "8080")
 	API_BASE_URL = getEnv("API_BASE_URL", "")
 	CLIENT_API_KEY = getEnv("CLIENT_API_KEY", "")
 	BRANCH_ID = getEnv("BRANCH_ID", "")

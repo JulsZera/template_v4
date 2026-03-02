@@ -2,12 +2,29 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import toast from "react-hot-toast";
+import { useUser } from "@/context/UserContext";
+import { apiRequest } from "@/services/api";
 
 export default function Register() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { user } = useUser(); // kalau perlu nanti
+  const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
+
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [selectedBank, setSelectedBank] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -35,6 +52,68 @@ export default function Register() {
   };
 
   const banks = ["BCA", "BNI", "BRI", "Mandiri"];
+
+  const handleRegister = async () => {
+    if (loading) return;
+
+    const error = validateForm();
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await apiRequest("/register", "POST", {
+        branch_id: BRANCH_ID,
+        username: username,
+        password: password,
+        email: email,
+        phonenumber: phone,
+        refferal: "",
+        type_wallet: "1",
+        id_wallet: selectedBank,
+        account_name: accountName,
+        account_number: accountNumber,
+        client_ip: "127.0.0.1",
+      });
+
+      if (res.status) {
+        toast.success("Register berhasil 🎉");
+
+        // reset form
+        setUsername("");
+        setEmail("");
+        setPhone("");
+        setPassword("");
+        setConfirmPassword("");
+        setSelectedBank("");
+        setAccountName("");
+        setAccountNumber("");
+      } else {
+        toast.error(res.message || "Register gagal");
+      }
+
+    } catch (err) {
+      toast.error("Server error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validateForm = () => {
+    if (!username) return "Username wajib diisi";
+    if (!email) return "Email wajib diisi";
+    if (!phone) return "Whatsapp wajib diisi";
+    if (!password) return "Password wajib diisi";
+    if (password !== confirmPassword) return "Konfirmasi password tidak cocok";
+    if (!selectedBank) return "Pilih jenis bank";
+    if (!accountName) return "Nama akun bank wajib diisi";
+    if (!accountNumber) return "Nomor rekening wajib diisi";
+
+    return null;
+  };
 
   return (
     <div className="w-screen min-h-screen pb-24 relative overflow-x-hidden" style={{ backgroundColor: "#F1C8D6" }}>
@@ -75,8 +154,8 @@ export default function Register() {
                 <input
                   type="text"
                   name="username"
-                  value={formData.username}
-                  onChange={handleChange}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
                   placeholder={t("username")}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
@@ -91,8 +170,8 @@ export default function Register() {
                 <input
                   type="email"
                   name="email"
-                  value={formData.email}
-                  onChange={handleChange}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder={t("email")}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
@@ -107,8 +186,8 @@ export default function Register() {
                 <input
                   type="tel"
                   name="whatsapp"
-                  value={formData.whatsapp}
-                  onChange={handleChange}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   required
                   placeholder={t("whatsapp")}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
@@ -124,8 +203,8 @@ export default function Register() {
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    value={formData.password}
-                    onChange={handleChange}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder={t("password")}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors pr-10"
@@ -149,8 +228,8 @@ export default function Register() {
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder={t("confirm_password")}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors pr-10"
@@ -179,8 +258,8 @@ export default function Register() {
                 </label>
                 <select
                   name="bankType"
-                  value={formData.bankType}
-                  onChange={handleChange}
+                  value={selectedBank}
+                  onChange={(e) => setSelectedBank(e.target.value)}
                   required
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors text-gray-700"
                 >
@@ -228,11 +307,13 @@ export default function Register() {
 
             {/* Register Button */}
             <button
-              type="submit"
+              onClick={handleRegister}
+              disabled={loading}
               className="w-full bg-gradient-to-r from-pink-400 to-pink-300 hover:from-pink-500 hover:to-pink-400 text-white font-bold py-3 rounded-lg transition-all mt-6"
               style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}
             >
-              {t("register")}
+              {/* {t("register")} */}
+              {loading ? "Memperoses..." : "Daftar"}
             </button>
 
             {/* Login Link */}

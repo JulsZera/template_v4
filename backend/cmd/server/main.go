@@ -72,8 +72,6 @@ func main() {
 
 	})
 
-	log.Println("Server running on :" + config.APP_PORT)
-
 	go func() {
 
 		log.Println("Preloading pagedata cache...")
@@ -97,5 +95,7 @@ func main() {
 	}()
 	cache.StartCacheWarmer()
 
-	http.ListenAndServe(":"+config.APP_PORT, r)
+	addr := config.LISTEN_ADDR
+	log.Println("Service running on", addr)
+	log.Fatal(http.ListenAndServe(addr, r))
 }

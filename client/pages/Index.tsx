@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useLanguage, Language } from "@/context/LanguageContext";
-import { fetchProvidersByCategory, fetchGamesByCategoryAndProvider, ProviderData, Game, getBalance, launchGame } from "@/services/api";
+import { fetchProvidersByCategory, ProviderData, fetchProviderAPI, Game, getBalance, launchGame } from "@/services/api";
 import { Wallet, Home, Zap, TrendingUp, Gift, Menu, X, Eye, EyeOff, LogOut, Search, Settings, Globe } from "lucide-react";
 import { fetchPageData } from "@/services/api";
 import { apiRequest } from "@/services/api";
@@ -469,7 +469,8 @@ const closePopup = async () => {
     const fetchProviders = async () => {
       setLoadingProviders(true);
       try {
-        const providers = await fetchProvidersByCategory(activeCategory);
+        // const providers = await fetchProvidersByCategory(activeCategory);
+        const providers = await fetchProviderAPI(activeCategory);
         setDynamicProviders(providers);
       } catch (error) {
         console.error("Error fetching providers:", error);
@@ -2354,7 +2355,7 @@ useEffect(() => {
               // 🔥 PROVIDER LIST
               <div
                 className="grid gap-2 responsive-game-grid"
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))" }}
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(30px, 1fr))" }}
               >
                 {dynamicProviders.map((provider, idx) => (
                   <div
@@ -2367,9 +2368,9 @@ useEffect(() => {
                       backgroundImage: `url(${provider.image})`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
-                      aspectRatio: "5/7",
-                      minWidth: "90px",
-                      maxWidth: "120px",
+                      aspectRatio: "7/4",
+                      minWidth: "30px",
+                      maxWidth: "600px",
                       animation: `blink-card 2s ease-in-out ${idx * 0.1}s infinite`,
                     }}
                   >
@@ -2393,7 +2394,7 @@ useEffect(() => {
                       className={`px-3 py-1 rounded-full text-xs ${
                         filterType === "all"
                           ? "bg-pink-500 text-white"
-                          : "bg-gray-200"
+                          : "bg-gray-200 text-black"
                       }`}
                     >
                       Semua Game
@@ -2404,10 +2405,10 @@ useEffect(() => {
                       className={`px-3 py-1 rounded-full text-xs ${
                         filterType === "new"
                           ? "bg-pink-500 text-white"
-                          : "bg-gray-200"
+                          : "bg-gray-200 text-black"
                       }`}
                     >
-                      New
+                      New Game
                     </button>
 
                     <button
@@ -2415,10 +2416,10 @@ useEffect(() => {
                       className={`px-3 py-1 rounded-full text-xs ${
                         filterType === "hot"
                           ? "bg-pink-500 text-white"
-                          : "bg-gray-200"
+                          : "bg-gray-200 text-black"
                       }`}
                     >
-                      Hot
+                      Hot Game
                     </button>
 
                   </div>
@@ -2440,7 +2441,7 @@ useEffect(() => {
                           backgroundImage: `url(${game.image})`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
-                          aspectRatio: "5/7",
+                          aspectRatio: "5/5",
                           minWidth: "90px",
                           maxWidth: "120px",
                           animation: `blink-card 2s ease-in-out ${

@@ -64,6 +64,7 @@ export interface ProviderData {
   slug: string;
   image?: string;
   flag?: string;
+  active?: string;
 }
 
 export interface CategoryProviders {
@@ -427,6 +428,7 @@ export async function fetchPageData(): Promise<void> {
 // FETCH PROVIDERS BY CATEGORY
 // ========================================
 
+
 export async function fetchProvidersByCategory(
   category: string
 ): Promise<ProviderData[]> {
@@ -442,57 +444,102 @@ export async function fetchProvidersByCategory(
 // ========================================
 // FETCH GAMES BY CATEGORY AND PROVIDER
 // ========================================
+export async function fetchProviderAPI(
+  categorySlug: string
+): Promise<ProviderData[]> {
 
-export async function fetchGamesByCategoryAndProvider(
-  category: string,
-  provider?: string
-): Promise<Game[]> {
-
-  await fetchPageData();
-  const mapped = CATEGORY_MAP[category.toLowerCase()];
-  if (!mapped) return [];
-
-  // ============================
-  // GAME HIT → tampil game
-  // ============================
-
-  if (mapped === "mostplay") {
-    return realMostPlay;
-  }
-
-  // ============================
-  // JIKA PROVIDER BELUM DIPILIH
-  // tampil provider sebagai game card
-  // ============================
-
-  // if (!provider) {
-
-  //   const providers = realProviders[mapped] || [];
-
-  //   return providers.map((p, index) => ({
-
-  //     id: index + 1,
-  //     name: p.name,
-  //     provider: p.slug,
-  //     image: p.image,
-  //     category: mapped,
-
-  //   }));
-
-  // }
-
-  // ============================
-  // JIKA PROVIDER DIPILIH
-  // tampil game provider tersebut
-  // ============================
-
-  return realGames.filter(
-    g =>
-      g.category === mapped &&
-      g.provider === provider.toLowerCase()
+  const result = await apiRequest(
+    "/provider",
+    "POST",
+    {
+      branch_id: BRANCH_ID,
+      category: normalizeCategoryAPI(categorySlug),
+    }
   );
 
+  if (!result || result.rcode !== "00") {
+    console.error("Failed load providers", result);
+    return [];
+  }
+
+  const providersRaw = result.data_provider || [];
+
+  return providersRaw.map((provider: any) => {
+    const slug = slugifyProviderName(provider.provider_name);
+
+    providerSlugToId[slug] = provider.id_mapping_provider;
+
+    // 🔥 HANDLE IMAGE BASED ON ACTIVE STATUS
+    let finalImage = provider.image_url;
+
+    if (provider.active === "0") {
+      finalImage = provider.image_comingsoon;
+    }
+
+    if (provider.active === "2") {
+      finalImage = provider.image_maintenance;
+    }
+
+    return {
+      id: provider.id_mapping_provider,
+      name: provider.provider_display || provider.provider_name,
+      slug: slug,
+      image: finalImage,
+      flag: "🎮",
+      active: provider.active, // optional kalau mau pakai di UI
+    };
+  });
 }
+// export async function fetchGamesByCategoryAndProvider(
+//   category: string,
+//   provider?: string
+// ): Promise<Game[]> {
+
+//   await fetchPageData();
+//   const mapped = CATEGORY_MAP[category.toLowerCase()];
+//   if (!mapped) return [];
+
+//   // ============================
+//   // GAME HIT → tampil game
+//   // ============================
+
+//   if (mapped === "mostplay") {
+//     return realMostPlay;
+//   }
+
+//   // ============================
+//   // JIKA PROVIDER BELUM DIPILIH
+//   // tampil provider sebagai game card
+//   // ============================
+
+//   // if (!provider) {
+
+//   //   const providers = realProviders[mapped] || [];
+
+//   //   return providers.map((p, index) => ({
+
+//   //     id: index + 1,
+//   //     name: p.name,
+//   //     provider: p.slug,
+//   //     image: p.image,
+//   //     category: mapped,
+
+//   //   }));
+
+//   // }
+
+//   // ============================
+//   // JIKA PROVIDER DIPILIH
+//   // tampil game provider tersebut
+//   // ============================
+
+//   return realGames.filter(
+//     g =>
+//       g.category === mapped &&
+//       g.provider === provider.toLowerCase()
+//   );
+
+// }
 
 
 // ========================================
@@ -572,23 +619,14 @@ export function normalizeCategoryAPI(slug: string): string {
 export function getCategories() {
 
   const mapped = realCategories.map((cat: any) => {
-
     const slug = normalizeCategorySlug(cat.category);
-
     return {
-
       id: slug,
-
       label: cat.display_category,
-
       image: cat.image_url,
-
       path: slug === "gamehit" ? "/" : `/${slug}`,
-
       apiURL: cat.url_provider_category,
-
       raw: cat.category,
-
     };
 
   });
@@ -654,7 +692,7 @@ export async function fetchGameList(
   console.log("Fetching game list:", cacheKey);
 
   const result = await apiRequest(
-    "/getdata_listgame",
+    "/listgame",
     "POST",
     {
       branch_id: BRANCH_ID,
@@ -722,7 +760,7 @@ export function getMostPlay(): Game[] {
 }
 
 // ========================================
-// LAUNCH GAME PGSOFT
+// LAUNCH GAME
 // ========================================
 
 export async function launchGame(data: {
