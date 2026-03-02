@@ -46,7 +46,7 @@ func main() {
 		r.Post("/login", handler.LoginHandler)
 		// GAME
 		r.Post("/pagedata", handler.GetPageDataHandler)
-		r.Post("/getdata_listgame", handler.GetDataListGameHandler)
+		r.Post("/gamelist", handler.GetDataListGameHandler)
 
 		log.Println("Route /api/pagedata registered")
 

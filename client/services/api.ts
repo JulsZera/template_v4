@@ -692,7 +692,7 @@ export async function fetchGameList(
   console.log("Fetching game list:", cacheKey);
 
   const result = await apiRequest(
-    "/listgame",
+    "/gamelist",
     "POST",
     {
       branch_id: BRANCH_ID,
