@@ -119,6 +119,75 @@ const setNameMeta = (name: string, content: string) => {
   element.setAttribute("content", content);
 };
 
+const injectRawHTML = (id: string, content: string, target: "head" | "body" = "head") => {
+  if (!content) return;
+
+  if (document.getElementById(id)) return;
+
+  const container = document.createElement("div");
+  container.id = id;
+  container.innerHTML = content;
+
+  if (target === "head") {
+    document.head.appendChild(container);
+  } else {
+    document.body.appendChild(container);
+  }
+};
+
+useEffect(() => {
+  if (!seoData) return;
+
+  // ===============================
+  // CANONICAL
+  // ===============================
+  if (seoData.custom_canonical_global) {
+    let link = document.querySelector("link[rel='canonical']");
+    if (!link) {
+      link = document.createElement("link");
+      link.setAttribute("rel", "canonical");
+      document.head.appendChild(link);
+    }
+    link.setAttribute("href", seoData.custom_canonical_global);
+  }
+
+  // ===============================
+  // META PIXEL (Tiktok / GTM)
+  // ===============================
+  if (seoData.meta_pixel) {
+    injectRawHTML("meta_pixel_script", seoData.meta_pixel, "head");
+  }
+
+  // ===============================
+  // GLOBAL HEAD SCRIPT
+  // ===============================
+  if (seoData.custom_script_global) {
+    injectRawHTML("custom_script_global", seoData.custom_script_global, "head");
+  }
+
+  // ===============================
+  // GLOBAL BODY SCRIPT
+  // ===============================
+  if (seoData.custom_script_body_global) {
+    injectRawHTML("custom_script_body_global", seoData.custom_script_body_global, "body");
+  }
+
+  // ===============================
+  // PAGE SCRIPT
+  // ===============================
+  if (seoData.custom_script_page) {
+    injectRawHTML("custom_script_page", seoData.custom_script_page, "body");
+  }
+
+  // ===============================
+  // LIVECHAT
+  // ===============================
+  if (seoData.script_livechat) {
+    injectRawHTML("livechat_script", seoData.script_livechat, "body");
+  }
+
+}, [seoData]);
+
 useEffect(() => {
   if (!seoData) return;
 
@@ -1288,9 +1357,8 @@ useEffect(() => {
             CUSTOM FOOTER (FROM CMS)
           =============================== */}
           {customFooter && (
-            <div className="mt-10">
+             <div className="mt-10 w-full overflow-hidden">
               <div
-                className="w-full"
                 dangerouslySetInnerHTML={{ __html: customFooter }}
               />
             </div>
@@ -2656,17 +2724,16 @@ useEffect(() => {
           </div>
         )}
 
-        {/* ===============================
+         {/* ===============================
             CUSTOM FOOTER (FROM CMS)
-        =============================== */}
-        {customFooter && (
-          <div className="mt-10">
-            <div
-              className="w-full"
-              dangerouslySetInnerHTML={{ __html: customFooter }}
-            />
-          </div>
-        )}
+          =============================== */}
+          {customFooter && (
+             <div className="mt-10 w-full overflow-hidden">
+              <div
+                dangerouslySetInnerHTML={{ __html: customFooter }}
+              />
+            </div>
+          )}
 
         {showPendingPopup && currentPopupData && (
           <div
