@@ -17,14 +17,13 @@ var DOMAIN_BANKING string
 
 func LoadEnv() {
 
-	JWT_SECRET = getEnv("JWT_SECRET", "")
-
 	err := godotenv.Load()
 
 	if err != nil {
 		log.Println("No .env file found")
 	}
 
+	JWT_SECRET = getEnv("JWT_SECRET", "")
 	LISTEN_ADDR = getEnv("LISTEN_ADDR", "")
 	API_BASE_URL = getEnv("API_BASE_URL", "")
 	CLIENT_API_KEY = getEnv("CLIENT_API_KEY", "")
