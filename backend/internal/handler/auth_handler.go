@@ -124,9 +124,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	var req model.RegisterRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
-
 	if err != nil {
-
 		response.Send(w, 400, "Invalid request", nil)
 		return
 	}
@@ -138,14 +136,24 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err != nil {
-
 		response.Send(w, 500, err.Error(), nil)
 		return
 	}
 
-	var result interface{}
+	var result map[string]interface{}
 
-	json.Unmarshal(resp, &result)
+	if err := json.Unmarshal(resp, &result); err != nil {
+		response.Send(w, 500, "Invalid upstream response", nil)
+		return
+	}
 
-	response.Send(w, 200, "Register success", result)
+	rcode, _ := result["rcode"].(string)
+	message, _ := result["message"].(string)
+
+	if rcode != "00" {
+		response.Send(w, 400, message, result)
+		return
+	}
+
+	response.Send(w, 200, message, result)
 }

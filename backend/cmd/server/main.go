@@ -41,33 +41,45 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	r.Route("/api", func(r chi.Router) {
+	r.Route("/vite", func(r chi.Router) {
 
 		r.Post("/login", handler.LoginHandler)
+		r.Post("/register", handler.RegisterHandler)
 		// GAME
 		r.Post("/pagedata", handler.GetPageDataHandler)
 		r.Post("/gamelist", handler.GetDataListGameHandler)
+		r.Post("/provider", handler.GetDataProviderHandler)
+		r.Post("/listbank", handler.ListBankPublicHandler)
 
-		log.Println("Route /api/pagedata registered")
+		log.Println("Route /vite/pagedata registered")
 
 		r.Group(func(r chi.Router) {
 
 			r.Use(middleware.JWTMiddleware)
 
+			// USER
 			r.Post("/profile", handler.GetProfileHandler)
 			r.Post("/balance", handler.GetBalanceHandler)
+			r.Post("/check-wallet", handler.CheckWalletHandler)
+			r.Post("/add-bank", handler.AddBankHandler)
+			r.Post("/check-request-reff", handler.CheckRequestRefferalHandler)
+			r.Post("/referral", handler.ReferralHandler)
+			r.Post("/request-reff", handler.RequestReferralHandler)
+			r.Post("/change-password", handler.ChangePasswordHandler)
+			r.Post("/check-wallet-user", handler.CheckWalletUserHandler)
+			r.Post("/update-popup-transaction", handler.UpdatePopupTransactionHandler)
+			r.Post("/turnover", handler.TurnoverHandler)
 
 			// TRANSACTION
 			r.Post("/deposit", handler.DepositHandler)
 			r.Post("/withdraw", handler.WithdrawHandler)
 			r.Post("/history", handler.GetHistoryHandler)
-			r.Post("/add-bank", handler.AddBankHandler)
-			r.Post("/referral", handler.ReferralHandler)
-			r.Post("/check-wallet", handler.CheckWalletHandler)
 			r.Post("/get-promotion", handler.GetPromotionHandler)
 			r.Post("/get-promotion-user", handler.GetPromotionDepositHandler)
-			r.Post("/update-popup-transaction", handler.UpdatePopupTransactionHandler)
+
+			// LAUNCHGAME
 			r.Post("/launchgame", handler.LaunchGameHandler)
+
 		})
 
 	})

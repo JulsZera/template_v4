@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useLanguage, Language } from "@/context/LanguageContext";
-import { fetchProvidersByCategory, ProviderData, fetchProviderAPI, Game, getBalance, launchGame } from "@/services/api";
+import { fetchAllProviders, fetchProvidersByCategory, ProviderData, fetchProviderAPI, Game, getBalance, launchGame } from "@/services/api";
 import { Wallet, Home, Zap, TrendingUp, Gift, Menu, X, Eye, EyeOff, LogOut, Search, Settings, Globe } from "lucide-react";
 import { fetchPageData } from "@/services/api";
 import { apiRequest } from "@/services/api";
@@ -14,6 +14,7 @@ import { getSEO } from "@/services/api";
 import { getPopup } from "@/services/api";
 import toast from "react-hot-toast";
 import { useUser } from "@/context/UserContext";
+import { COLORS } from "@/config/colors";
 
 export default function Index() {
   const location = useLocation();
@@ -45,14 +46,16 @@ export default function Index() {
   const [filterType, setFilterType] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [jwtToken, setJwtToken] = useState<string | null>(null);
-  const { user, setUser, updateBalance, pendingTransactions, setPendingTransactions } = useUser();
+  const { user, setUser, updateBalance, pendingTransactions, setPendingTransactions, logout } = useUser();
   const isLoggedIn = !!user;
-  const { logout } = useUser();
   const [showPendingPopup, setShowPendingPopup] = useState(false);
   const [animatePopup, setAnimatePopup] = useState(false);
   const [currentPopupData, setCurrentPopupData] = useState<any>(null);
   const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [allProviders, setAllProviders] = useState<ProviderData[]>([]);
+  
+  // const [turnover, setTurnover ] = useState<any>(null);
 
   // useEffect(() => {
   //   console.log("USER DI INDEX:", user);
@@ -116,18 +119,53 @@ const setNameMeta = (name: string, content: string) => {
   element.setAttribute("content", content);
 };
 
+useEffect(() => {
+  if (!seoData) return;
+
+  document.title =
+    seoData.default_website_title || seoData.website_name;
+
+  const desc = seoData.running_text || "";
+
+  setNameMeta("description", desc);
+  setMetaTag("og:title", seoData.default_website_title || "");
+  setMetaTag("og:description", desc);
+  setMetaTag("og:image", seoData.logo || "");
+
+  // 🔥 Inject custom head script
+  injectScript("seo-head-script", seoData.script_head, "head");
+
+  // 🔥 Inject body script
+  injectScript("seo-body-script", seoData.script_body, "body");
+
+  // 🔥 Inject custom HTML
+  injectHTML("seo-custom-html", seoData.custom_html, "body");
+
+}, [seoData]);
+
+useEffect(() => {
+  if (!seoData) return;
+
+  if (seoData.flag_custom_footer === "1" && seoData.custom_footer) {
+    setCustomFooter(seoData.custom_footer);
+  }
+
+}, [seoData]);
+
 //====================END SEO====================//
 
 useEffect(() => {
   const init = async () => {
     await fetchPageData();
 
+    const seo = getSEO();
+    const popupData = getPopup();
+    const bannerRaw = getBanners();
+
     setCategories(getCategories());
     setBankStatus(getBankStatus());
-    setSeoData(getSEO());
-    setPopup(getPopup());
-
-    const bannerRaw = getBanners();
+    setSeoData(seo);
+    setPopup(popupData);
 
     const formatted = bannerRaw.map((b: any, index: number) => ({
       id: b.id || index + 1,
@@ -135,9 +173,15 @@ useEffect(() => {
     }));
 
     setBanners(formatted);
-
     setDynamicGames(getMostPlay());
-  };
+
+    if (popupData && popupData.status === "1") {
+      setShowPopup(true);
+    }
+    // 🔥 TAMBAHKAN INI
+    const providers = await fetchAllProviders();
+      setAllProviders(providers);
+    };
 
   init();
 }, []);
@@ -209,7 +253,7 @@ useEffect(() => {
 
     try {
       setLoadingGames(true);
-      console.log("CALL FETCH:", activeCategory, selectedProvider);
+      // console.log("CALL FETCH:", activeCategory, selectedProvider);
       const games = await fetchGameList(
         activeCategory,
         selectedProvider,
@@ -261,7 +305,7 @@ const handleSignIn = async (e: React.FormEvent) => {
     if (res.status) {
       const jwt = res.data.jwt;
 
-      console.log("JWT :", jwt)
+      // console.log("JWT :", jwt)
 
       localStorage.setItem("jwt", jwt);
       setJwtToken(jwt);
@@ -277,7 +321,7 @@ const handleSignIn = async (e: React.FormEvent) => {
       const balanceData = balanceRes?.data?.data;
 
       const decoded = parseJwt(jwt);
-       console.log("DECODED JWT:", decoded); // 👈 TARUH DI SINI
+      //  console.log("DECODED JWT:", decoded); // 👈 TARUH DI SINI
       
       const userData = {
 
@@ -285,7 +329,9 @@ const handleSignIn = async (e: React.FormEvent) => {
         gameplayid: decoded?.gameplayid || "",
         gameplaynum: decoded?.gameplaynum || "",
         sessionToken: decoded?.token || "",
-        // id_tier: decoded?.id_tier || "",
+        name: decoded?.name || "",
+        email: decoded?.email || "",
+        phonenumber: decoded?.phonenumber || "",
 
         id_tier: balanceData.id_tier,
         balance: Number(balanceData.balance),
@@ -299,11 +345,12 @@ const handleSignIn = async (e: React.FormEvent) => {
       };
 
       setUser(userData);
-      console.log("USER AFTER SET:", userData);
-      console.log("FULL LOGIN RESPONSE:", res);
+      // console.log("USER AFTER SET:", userData);
+      // console.log("FULL LOGIN RESPONSE:", res);
       localStorage.setItem("userData", JSON.stringify(userData));
+      processBalanceResponse(balanceRes);
       // setAuthLoading(false); // 🔥 TAMBAHKAN DI SINI
-      console.log("SET USER SUCCESS");
+      // console.log("SET USER SUCCESS");
       setShowSignInModal(false);
 
       toast.success("Login berhasil 🎉")
@@ -318,6 +365,15 @@ const handleSignIn = async (e: React.FormEvent) => {
     setLoginLoading(false);
   }
 };
+
+useEffect(() => {
+  if (!popup) return;
+
+  if (popup.status === "1") {
+    setShowPopup(true);
+  }
+
+}, [popup]);
 
 //========== POPUP TRANSACTION =============//
 
@@ -543,7 +599,7 @@ useEffect(() => {
         prev >= searchedGames.length ? prev : prev + 21
       );
     }
-    console.log("scrollY:", window.scrollY);
+    // console.log("scrollY:", window.scrollY);
   };
 
   window.addEventListener("scroll", handleScroll);
@@ -678,7 +734,7 @@ useEffect(() => {
   };
 
   const handleLogout = () => {
-    console.log("CLICK LOGOUT");
+    // console.log("CLICK LOGOUT");
 
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -688,6 +744,8 @@ useEffect(() => {
     logout();
     navigate("/");
     toast("Logout berhasil 👋");
+    console.log("USER BEFORE LOGOUT:", user);
+    console.log("INDEX RENDER USER:", user);
   };
 
   const handleLaunchGame = async (game: any) => {
@@ -708,7 +766,7 @@ useEffect(() => {
 
     const res = await launchGame(payload);
 
-    console.log("RCODE :", res)
+    // console.log("RCODE :", res)
 
     if (res?.status === true) {
 
@@ -736,6 +794,47 @@ useEffect(() => {
     toast.error("Terjadi kesalahan saat membuka game");
   }
 };
+
+//=============== TURN OVER =============//
+
+const fetchTurnover = async () => {
+  if (!user) return;
+
+  const today = new Date();
+  const past = new Date();
+  past.setMonth(today.getMonth() - 1);
+
+  const formatDate = (date: Date) =>
+    date.toISOString().split("T")[0];
+
+  const res = await apiRequest("/turnover", "POST", {
+    branch_id: BRANCH_ID,
+    username: user.username,
+    gameplayid: user.gameplayid,
+    gameplaynum: user.gameplaynum,
+    category: "All",
+    provider: "All",
+    start_date: formatDate(past),
+    end_date: formatDate(today),
+  });
+
+  // console.log("TURNOVER RES:", res);
+
+  if (res?.data?.data) {
+    const data = res.data.data;
+
+    // setTurnover({
+    //   current: data.total_turnover ?? "0.00",
+    //   target: data.target_turnover ?? "0.00",
+    // });
+  }
+};
+
+useEffect(() => {
+  if (showWalletModal) {
+    fetchTurnover();
+  }
+}, [showWalletModal]);
 
   // if (authLoading) return null;
   // console.log("RENDER USER:", user);
@@ -993,7 +1092,7 @@ useEffect(() => {
               // 🔥 GAME HIT (mostplay)
               <div
                 className="grid gap-2 responsive-game-grid"
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))" }}
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))" }}
               >
                 {searchedGames.slice(0, visibleCount).map((game, idx) => (
                   <div
@@ -1004,9 +1103,9 @@ useEffect(() => {
                       backgroundImage: `url(${game.image})`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
-                      aspectRatio: "5/7",
-                      minWidth: "90px",
-                      maxWidth: "120px",
+                      aspectRatio: "5/5",
+                      minWidth: "80px",
+                      maxWidth: "110px",
                       animation: `blink-card 2s ease-in-out ${idx * 0.1}s infinite`,
                     }}
                   >
@@ -1037,7 +1136,7 @@ useEffect(() => {
                       backgroundImage: `url(${provider.image})`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
-                      aspectRatio: "5/7",
+                      aspectRatio: "7/4",
                       minWidth: "90px",
                       maxWidth: "120px",
                       animation: `blink-card 2s ease-in-out ${idx * 0.1}s infinite`,
@@ -1098,7 +1197,7 @@ useEffect(() => {
                     key={`${activeCategory}_${selectedProvider}_${filterType}`}
                     className="grid gap-2 responsive-game-grid"
                     style={{
-                      gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
                     }}
                   >
                     {searchedGames.slice(0, visibleCount).map((game, idx) => (
@@ -1110,9 +1209,9 @@ useEffect(() => {
                           backgroundImage: `url(${game.image})`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
-                          aspectRatio: "5/7",
-                          minWidth: "90px",
-                          maxWidth: "120px",
+                          aspectRatio: "5/5",
+                          minWidth: "80px",
+                          maxWidth: "110px",
                           animation: `blink-card 2s ease-in-out ${
                             idx * 0.1
                           }s infinite`,
@@ -1153,6 +1252,47 @@ useEffect(() => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Provider Game Section - Grid Version */}
+          {allProviders.length > 0 && (
+            <div className="px-4 mt-6">
+              <h2 className="text-sm font-semibold text-gray-700 mb-3">
+                Provider Game
+              </h2>
+
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                {allProviders
+                  .sort((a: any, b: any) => (a.sort_by || 0) - (b.sort_by || 0))
+                  .map((provider, index) => (
+                    <div
+                      key={provider.id || index}
+                      className="bg-white/70 backdrop-blur-md rounded-xl p-3 flex items-center justify-center shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105"
+                    >
+                      <img
+                        src={provider.image}
+                        alt={provider.name}
+                        className="max-h-8 object-contain grayscale hover:grayscale-0 transition-all duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/placeholder.png";
+                        }}
+                      />
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* ===============================
+            CUSTOM FOOTER (FROM CMS)
+          =============================== */}
+          {customFooter && (
+            <div className="mt-10">
+              <div
+                className="w-full"
+                dangerouslySetInnerHTML={{ __html: customFooter }}
+              />
             </div>
           )}
 
@@ -2324,7 +2464,7 @@ useEffect(() => {
               // 🔥 GAME HIT (mostplay)
               <div
                 className="grid gap-2 responsive-game-grid"
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))" }}
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))" }}
               >
                 {searchedGames.slice(0, visibleCount).map((game, idx) => (
                   <div
@@ -2335,9 +2475,9 @@ useEffect(() => {
                       backgroundImage: `url(${game.image})`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
-                      aspectRatio: "5/7",
-                      minWidth: "90px",
-                      maxWidth: "120px",
+                      aspectRatio: "5/5",
+                      minWidth: "80px",
+                      maxWidth: "110px",
                       animation: `blink-card 2s ease-in-out ${idx * 0.1}s infinite`,
                     }}
                   >
@@ -2355,7 +2495,7 @@ useEffect(() => {
               // 🔥 PROVIDER LIST
               <div
                 className="grid gap-2 responsive-game-grid"
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(30px, 1fr))" }}
+                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))" }}
               >
                 {dynamicProviders.map((provider, idx) => (
                   <div
@@ -2369,8 +2509,8 @@ useEffect(() => {
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                       aspectRatio: "7/4",
-                      minWidth: "30px",
-                      maxWidth: "600px",
+                      minWidth: "90px",
+                      maxWidth: "120px",
                       animation: `blink-card 2s ease-in-out ${idx * 0.1}s infinite`,
                     }}
                   >
@@ -2429,7 +2569,7 @@ useEffect(() => {
                     key={`${activeCategory}_${selectedProvider}_${filterType}`}
                     className="grid gap-2 responsive-game-grid"
                     style={{
-                      gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
                     }}
                   >
                     {searchedGames.slice(0, visibleCount).map((game, idx) => (
@@ -2442,8 +2582,8 @@ useEffect(() => {
                           backgroundSize: "cover",
                           backgroundPosition: "center",
                           aspectRatio: "5/5",
-                          minWidth: "90px",
-                          maxWidth: "120px",
+                          minWidth: "80px",
+                          maxWidth: "110px",
                           animation: `blink-card 2s ease-in-out ${
                             idx * 0.1
                           }s infinite`,
@@ -2484,6 +2624,47 @@ useEffect(() => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Provider Game Section - Grid Version */}
+        {allProviders.length > 0 && (
+          <div className="px-4 mt-6">
+            <h2 className="text-sm font-semibold text-gray-700 mb-3">
+              Provider Game
+            </h2>
+
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+              {allProviders
+                .sort((a: any, b: any) => (a.sort_by || 0) - (b.sort_by || 0))
+                .map((provider, index) => (
+                  <div
+                    key={provider.id || index}
+                    className="bg-white/70 backdrop-blur-md rounded-xl p-3 flex items-center justify-center shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105"
+                  >
+                    <img
+                      src={provider.image}
+                      alt={provider.name}
+                      className="max-h-8 object-contain grayscale hover:grayscale-0 transition-all duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/placeholder.png";
+                      }}
+                    />
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* ===============================
+            CUSTOM FOOTER (FROM CMS)
+        =============================== */}
+        {customFooter && (
+          <div className="mt-10">
+            <div
+              className="w-full"
+              dangerouslySetInnerHTML={{ __html: customFooter }}
+            />
           </div>
         )}
 
@@ -2683,13 +2864,20 @@ useEffect(() => {
               <h3 className="font-bold text-sm mb-3 text-white drop-shadow">Main Menu</h3>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: "💰", label: "Deposit" },
-                  { icon: "💰", label: "Withdraw" },
-                  { icon: "📜", label: "History" },
+                  { icon: "💰", label: "Deposit - Withdraw", action: "banking" },
+                  { icon: "👤", label: "Profile", action: "profiles" },
+                  { icon: "📜", label: "History", action: "history" },
                 ].map((item, idx) => (
                   <button
                     key={idx}
-                    onClick={() => navigate("/banking")}
+                    onClick={() => {
+                      setShowMenu(false);
+                      setTimeout(() => {
+                        if (item.action === "profiles") navigate("/profiles");
+                        if (item.action === "banking") navigate("/banking");
+                        if (item.action === "history") navigate("/history");
+                      }, 150);
+                    }}
                     className="bg-white rounded-lg p-2 text-center hover:shadow-lg transition-all flex flex-col items-center gap-1"
                   >
                     <span className="text-2xl">{item.icon}</span>

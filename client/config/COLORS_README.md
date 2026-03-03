@@ -120,7 +120,7 @@ File ini includes a `colorsAsJSON` export yang bisa digunakan untuk API:
 import { colorsAsJSON } from '@/config/colors';
 
 // Get all colors as JSON string
-console.log(colorsAsJSON);
+// console.log(colorsAsJSON);
 ```
 
 ### Consuming from API

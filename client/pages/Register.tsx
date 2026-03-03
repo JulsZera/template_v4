@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState , useEffect} from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/context/LanguageContext";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
@@ -24,34 +24,24 @@ export default function Register() {
   const [accountName, setAccountName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    whatsapp: "",
-    password: "",
-    confirmPassword: "",
-    bankType: "",
-    bankAccountName: "",
-    accountNumber: "",
-  });
+  const [loading, setLoading] = useState(false)
+  const [bankList, setBankList] = useState<any[]>([]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  useEffect(() => {
+    const fetchBank = async () => {
+      const res = await apiRequest("/listbank", "POST", {
+        branch_id: BRANCH_ID,
+      });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData.password !== formData.confirmPassword) {
-      alert(t("password_mismatch") || "Passwords do not match");
-      return;
-    }
-    // TODO: Implement registration logic
-    navigate("/");
-  };
+      // console.log("BANK RES:", res);
 
-  const banks = ["BCA", "BNI", "BRI", "Mandiri"];
+      if (res?.data?.data) {
+        setBankList(res.data.data);
+      }
+    };
+
+    fetchBank();
+  }, []);
 
   const handleRegister = async () => {
     if (loading) return;
@@ -80,7 +70,12 @@ export default function Register() {
       });
 
       if (res.status) {
+        toast.dismiss();
         toast.success("Register berhasil 🎉");
+
+        setTimeout(() => {
+          navigate("/");
+        }, 1200);
 
         // reset form
         setUsername("");
@@ -104,13 +99,16 @@ export default function Register() {
 
   const validateForm = () => {
     if (!username) return "Username wajib diisi";
+    if (!username.trim()) return "Username wajib diisi";
     if (!email) return "Email wajib diisi";
     if (!phone) return "Whatsapp wajib diisi";
     if (!password) return "Password wajib diisi";
+    if (password.length < 6) return "Password minimal 6 karakter";
     if (password !== confirmPassword) return "Konfirmasi password tidak cocok";
     if (!selectedBank) return "Pilih jenis bank";
     if (!accountName) return "Nama akun bank wajib diisi";
     if (!accountNumber) return "Nomor rekening wajib diisi";
+    if (!/^\d+$/.test(accountNumber)) return "Nomor rekening harus angka";
 
     return null;
   };
@@ -139,7 +137,7 @@ export default function Register() {
       {/* Registration Form */}
       <div className="flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-6">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form className="space-y-5">
             {/* Personal Information Section */}
             <div>
               <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b-2 border-pink-300">
@@ -264,9 +262,9 @@ export default function Register() {
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors text-gray-700"
                 >
                   <option value="">-- {t("bank_type")} --</option>
-                  {banks.map((bank) => (
-                    <option key={bank} value={bank}>
-                      {bank}
+                  {bankList.map((bank) => (
+                    <option key={bank.id_wallet} value={bank.id_wallet}>
+                      {bank.bank_name}
                     </option>
                   ))}
                 </select>
@@ -280,8 +278,8 @@ export default function Register() {
                 <input
                   type="text"
                   name="bankAccountName"
-                  value={formData.bankAccountName}
-                  onChange={handleChange}
+                  value={accountName}
+                  onChange={(e) => setAccountName(e.target.value)}
                   required
                   placeholder={t("bank_account_name")}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
@@ -296,8 +294,8 @@ export default function Register() {
                 <input
                   type="text"
                   name="accountNumber"
-                  value={formData.accountNumber}
-                  onChange={handleChange}
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
                   required
                   placeholder={t("account_number")}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
@@ -307,6 +305,7 @@ export default function Register() {
 
             {/* Register Button */}
             <button
+              type="button"
               onClick={handleRegister}
               disabled={loading}
               className="w-full bg-gradient-to-r from-pink-400 to-pink-300 hover:from-pink-500 hover:to-pink-400 text-white font-bold py-3 rounded-lg transition-all mt-6"

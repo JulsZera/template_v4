@@ -19,16 +19,16 @@ export default function Promo() {
     const fetchPromo = async () => {
       setLoading(true);
 
-      console.log("USER IN PROMO:", user);
-      console.log("JWT IN PROMO:", localStorage.getItem("jwt"));
+      // console.log("USER IN PROMO:", user);
+      // console.log("JWT IN PROMO:", localStorage.getItem("jwt"));
 
       const res = await apiRequest("/get-promotion", "POST", {
         branch_id: BRANCH_ID,
         username: user.username,
       });
 
-      console.log("BRANCH_ID :", BRANCH_ID)
-      console.log("USERNAME : ",user.username)
+      // console.log("BRANCH_ID :", BRANCH_ID)
+      // console.log("USERNAME : ",user.username)
 
       if (res?.rcode === "00") {
         setPromos(res.data ?? []);

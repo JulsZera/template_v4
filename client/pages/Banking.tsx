@@ -114,7 +114,7 @@ useEffect(() => {
   if (!user?.id_tier) return;
 
   const loadBanking = async () => {
-    const res = await apiRequest("/check-wallet", "POST", {
+    const res = await apiRequest("/check-wallet-user", "POST", {
       branch_id: BRANCH_ID,
       username: user.username,
       transaction_type: "3",
@@ -126,8 +126,8 @@ useEffect(() => {
       setAdminWallets(res.data_admin || []);
       setUserBanks(res.data_user || []);
 
-      console.log("DATA ADMIN:", res.data_admin);
-      console.log("DATA USER", res.data_user);
+      // console.log("DATA ADMIN:", res.data_admin);
+      // console.log("DATA USER", res.data_user);
     }
   };
 
@@ -286,12 +286,12 @@ useEffect(() => {
       type_wallet: user.type_wallet
     });
 
-    console.log("BRANCH ID:",BRANCH_ID)
-    console.log("TW :",user.type_wallet)
+    // console.log("BRANCH ID:",BRANCH_ID)
+    // console.log("TW :",user.type_wallet)
 
     if (res?.rcode === "00") {
       setPromos(res.data || []);
-      console.log("PROMO :", res.data)
+      // console.log("PROMO :", res.data)
     }
 
     setLoadingPromo(false);
@@ -384,10 +384,10 @@ const handleDepositClick = async () => {
     formData.append("description", notes || "-");
     formData.append("image_source", receiptFile);
 
-    console.log("=== DEPOSIT FORM DATA ===");
+    // console.log("=== DEPOSIT FORM DATA ===");
 
     for (let pair of formData.entries()) {
-      console.log(pair[0] + ":", pair[1]);
+      // console.log(pair[0] + ":", pair[1]);
     }
 
     const res = await uploadWithProgress(
@@ -417,7 +417,7 @@ const handleDepositClick = async () => {
 
   } catch (err) {
     toast.error(err)
-    console.log("Error :", err)
+    // console.log("Error :", err)
   } finally {
     setDepositLoading(false);
   }
@@ -478,16 +478,16 @@ const handleWithdrawClick = async () => {
 
     const walletString = `${selectedBankData.id_wallet};${selectedBankData.account_name};${selectedBankData.bank_name};${selectedBankData.account_number};${selectedBankData.type_wallet}`;
 
-    console.log("=== WITHDRAW BODY ===");
-    console.log({
-      branch_id: BRANCH_ID,
-      username: user.username,
-      gameplayid: user.gameplayid,
-      gameplaynum: user.gameplaynum,
-      wallet_user: walletString,
-      amount: amountNumber,
-      description: ""
-    });
+    // console.log("=== WITHDRAW BODY ===");
+    // console.log({
+    //   branch_id: BRANCH_ID,
+    //   username: user.username,
+    //   gameplayid: user.gameplayid,
+    //   gameplaynum: user.gameplaynum,
+    //   wallet_user: walletString,
+    //   amount: amountNumber,
+    //   description: ""
+    // });
 
     const res = await apiRequest("/withdraw", "POST", {
       branch_id: BRANCH_ID,
@@ -508,7 +508,7 @@ const handleWithdrawClick = async () => {
     }
 
   } catch (err) {
-    console.log("Withdraw Error:", err);
+    // console.log("Withdraw Error:", err);
     toast.error("Terjadi kesalahan sistem")
   } finally {
     setWithdrawLoading(false);
@@ -540,7 +540,7 @@ const handleSearchHistory = async () => {
     type: transactionType // all / deposit / withdraw
   });
 
-  console.log(res)
+  // console.log(res)
 
   if (res.status) {
     setHistoryData(res.data?.data ?? []);

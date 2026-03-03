@@ -7,7 +7,7 @@ interface UserData {
   gameplaynum: string;
   sessionToken: string;
 
-  phone?: string;
+  phonenumber?: string;
   email?: string;
 
   level?: string;
@@ -57,12 +57,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    console.log("LOGOUT DIPANGGIL");
+    // console.log("LOGOUT DIPANGGIL");
     localStorage.removeItem("jwt");
     localStorage.removeItem("userData");
     localStorage.removeItem("username");
     setUser(null);
     setPendingTransactions([]);
+    window.location.replace("/");
     };
 
   return (

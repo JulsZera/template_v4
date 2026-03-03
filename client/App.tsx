@@ -14,8 +14,10 @@ import Promo from "./pages/Promo";
 import Deposit from "./pages/Deposit";
 import Withdraw from "./pages/Withdraw";
 import Banking from "./pages/Banking";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
+const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
 
 function App() {
 const { setUser, setAuthLoading, authLoading } = useUser();
@@ -31,16 +33,27 @@ const { setUser, setAuthLoading, authLoading } = useUser();
       return;
     }
 
-    // // 🔥 langsung pakai data login yang sudah disimpan
-    // setUser(parsedUser);
-
     try {
 
-      const profileRes = await apiRequest("/profile", "POST");
+      const parsedUser = JSON.parse(savedUser);
+
+      const profileRes = await apiRequest("/profile", "POST", {
+        branch_id: BRANCH_ID,
+        username: parsedUser.username,
+        gameplayid: parsedUser.gameplayid,
+        gameplaynum: parsedUser.gameplaynum,
+        function: "dataprofile",
+      });
       const balanceRes = await apiRequest("/balance", "POST");
 
+      if (!localStorage.getItem("jwt")) {
+        // 🔥 Kalau logout di tengah proses
+        setAuthLoading(false);
+        return;
+      }
+      
       const balanceData = balanceRes?.data?.data;
-      const parsedUser = JSON.parse(savedUser);
+
       
       console.log("RESTORE SESSION START");
       console.log("JWT:", jwt);
@@ -99,6 +112,7 @@ if (authLoading) return null;
               <Route path="/deposit" element={<Deposit />} />
               <Route path="/withdraw" element={<Withdraw />} />
               <Route path="/banking" element={<Banking />} />
+              <Route path="/profiles" element={<Profile />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

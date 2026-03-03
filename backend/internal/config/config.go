@@ -25,6 +25,7 @@ func LoadEnv() {
 		log.Println("No .env file found")
 	}
 
+	LISTEN_ADDR = getEnv("LISTEN_ADDR", "")
 	API_BASE_URL = getEnv("API_BASE_URL", "")
 	CLIENT_API_KEY = getEnv("CLIENT_API_KEY", "")
 	BRANCH_ID = getEnv("BRANCH_ID", "")
