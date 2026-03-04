@@ -282,12 +282,15 @@ useEffect(() => {
 
     const res = await apiRequest("/get-promotion-user", "POST", {
       branch_id: BRANCH_ID,
+      username: user?.username,
       type_promo: "4",
       type_wallet: user.type_wallet
     });
 
-    // console.log("BRANCH ID:",BRANCH_ID)
-    // console.log("TW :",user.type_wallet)
+    console.log("BRANCH ID:",BRANCH_ID)
+    console.log("Username :",user?.username)
+    console.log("TW :",user.type_wallet)
+    
 
     if (res?.rcode === "00") {
       setPromos(res.data || []);
@@ -813,15 +816,15 @@ const paginatedData = historyData.slice(
                       {t("deposit_amount")} *
                     </label>
                     <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-600">{t("idr")}</span>
                       <input
                         type="number"
                         value={depositAmount}
                         onChange={(e) => setDepositAmount(e.target.value)}
                         placeholder={t("enter_deposit_amount")}
-                        className="text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none"
+                        className="text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none w-0"
                         style={{ borderColor: COLORS.primary.light }}
                       />
-                      <span className="font-bold text-gray-600">{t("idr")}</span>
                     </div>
                     <p className="text-xs text-gray-600 mt-1">
                       {t("minimum")} IDR {Number(selectedBankData?.min_depo ?? 0).toLocaleString()} |
@@ -1320,15 +1323,15 @@ const paginatedData = historyData.slice(
                       {t("withdraw_amount")} *
                     </label>
                     <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-600">{t("idr")}</span>
                       <input
                         type="number"
                         value={withdrawalAmount}
                         onChange={(e) => setWithdrawalAmount(e.target.value)}
                         placeholder="Masukkan jumlah penarikan"
-                        className="text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none"
+                        className="text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none w-0"
                         style={{ borderColor: COLORS.primary.light }}
                       />
-                      <span className="font-bold text-gray-600">{t("idr")}</span>
                     </div>
                     <p className="text-xs text-gray-600 mt-1">
                       {t("minimum")} IDR {Number(selectedBankData?.min_depo ?? 0).toLocaleString()} |

@@ -32,19 +32,19 @@ func GetPromotionDepositHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Println("=== PROMO MEMBER REQUEST ===")
+	log.Println("branch_id:", req.BranchID)
+	log.Println("username:", req.Username)
+	log.Println("typepromo:", req.TypePromo)
+	log.Println("typewallet:", req.TypeWallet)
+
 	if req.BranchID == "" || req.Username == "" {
 		response.Send(w, 400, "Missing required fields", nil)
 		return
 	}
 
-	log.Println("=== PROMO MEMBER REQUEST ===")
-	log.Println("branch_id:", req.BranchID)
-	log.Println("username:", req.Username)
-	log.Println("branch_id:", req.TypePromo)
-	log.Println("username:", req.TypeWallet)
-
 	resp, err := service.Post(
-		"/account/api/manage/getdata_promotion_new",
+		"/account/api/content/getdata_promotion_new",
 		req,
 		token,
 	)
@@ -104,7 +104,7 @@ func GetPromotionHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("username:", req.Username)
 
 	resp, err := service.Post(
-		"/account/api/manage/getdata_promotion",
+		"/account/api/content/getdata_promotion",
 		req,
 		token,
 	)

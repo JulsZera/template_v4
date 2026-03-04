@@ -80,6 +80,9 @@ const Profile = () => {
   });
 
   const [turnoverData, setTurnoverData] = useState<any[]>([]);
+  const today = new Date().toISOString().split("T")[0];
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState(today);
 
     /* =========================
      FETCH PROFILE / REFERRAL
@@ -921,15 +924,15 @@ const Profile = () => {
   // ===== TAB: STATISTIK (Statistics) =====
   const renderStatisticsTab = () => (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl p-6 border-2" style={{ borderColor: COLORS.primary.light }}>
-        <h3 className="text-sm font-bold mb-4">📊 {t("data_turnover") || "Data Turnover"}</h3>
+      <div className="bg-pink-100 rounded-xl p-6 border-2" style={{ borderColor: COLORS.primary.light }}>
+        <h3 className="text-gray-600 text-sm font-bold mb-4">📊 {t("data_turnover") || "Data Turnover"}</h3>
         <div className="text-xs text-pink-500 mb-4">{t("view_performance") || "Pantau performa bemain Anda dengan filter"}</div>
 
         {/* Filter Section */}
         <div className="mb-6 pb-6 border-b-2" style={{ borderColor: COLORS.primary.light }}>
           <div className="flex items-center gap-2 mb-4">
             <span className="text-lg">🔍</span>
-            <p className="text-xs font-bold">{t("filter_data") || "Filter Data"}</p>
+            <p className="text-gray-600 text-xs font-bold">{t("filter_data") || "Filter Data"}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -937,9 +940,9 @@ const Profile = () => {
               <label className="text-xs font-bold text-pink-500">{t("start_date") || "Tanggal Mulai"}</label>
               <input
                 type="date"
-                value={statsFilter.startDate}
-                onChange={(e) => setStatsFilter({ ...statsFilter, startDate: e.target.value })}
-                className="w-full mt-2 px-3 py-2 border-2 rounded-lg text-sm"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="text-gray-600 w-full mt-2 px-3 py-2 border-2 rounded-lg text-sm"
                 style={{ borderColor: COLORS.primary.light }}
               />
             </div>
@@ -948,9 +951,9 @@ const Profile = () => {
               <label className="text-xs font-bold text-pink-500">{t("end_date") || "Tanggal Selesai"}</label>
               <input
                 type="date"
-                value={statsFilter.endDate}
-                onChange={(e) => setStatsFilter({ ...statsFilter, endDate: e.target.value })}
-                className="w-full mt-2 px-3 py-2 border-2 rounded-lg text-sm"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="text-gray-600 w-full mt-2 px-3 py-2 border-2 rounded-lg text-sm"
                 style={{ borderColor: COLORS.primary.light }}
               />
             </div>
@@ -960,7 +963,7 @@ const Profile = () => {
               <select
                 value={statsFilter.category}
                 onChange={(e) => setStatsFilter({ ...statsFilter, category: e.target.value })}
-                className="w-full mt-2 px-3 py-2 border-2 rounded-lg text-sm"
+                className="text-gray-600 w-full mt-2 px-3 py-2 border-2 rounded-lg text-sm"
                 style={{ borderColor: COLORS.primary.light }}
               >
                 <option value="semua_kategori">{t("all_categories") || "Semua Kategori"}</option>
@@ -974,7 +977,7 @@ const Profile = () => {
               <select
                 value={statsFilter.provider}
                 onChange={(e) => setStatsFilter({ ...statsFilter, provider: e.target.value })}
-                className="w-full mt-2 px-3 py-2 border-2 rounded-lg text-sm"
+                className="text-gray-600 w-full mt-2 px-3 py-2 border-2 rounded-lg text-sm"
                 style={{ borderColor: COLORS.primary.light }}
               >
                 <option value="semua_provider">{t("all_providers") || "Semua Provider"}</option>
@@ -986,8 +989,8 @@ const Profile = () => {
 
           <button
             onClick={() => alert("Mencari data...")}
-            className="w-full mt-4 px-4 py-2 rounded-lg font-bold text-sm text-white"
-            style={{ backgroundColor: COLORS.secondary.orange }}
+            className="bg-pink-500 w-full mt-4 px-4 py-2 rounded-lg font-bold text-sm text-white"
+            style={{ backgroundColor: COLORS.primary.main }}
           >
             {t("search_data") || "Cari Data"}
           </button>
@@ -995,13 +998,13 @@ const Profile = () => {
 
         {/* Results Section */}
         <div>
-          <h4 className="text-sm font-bold mb-4">
+          <h4 className="text-gray-600 text-sm font-bold mb-4">
             Hasil Pencarian: {turnoverData.length} hasil
           </h4>
 
           {turnoverData.length === 0 ? (
             <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <p className="text-sm font-bold">Belum ada data turnover</p>
+              <p className="text-gray-600 text-sm font-bold">Belum ada data turnover</p>
             </div>
           ) : (
             <table className="w-full text-xs border mt-4">

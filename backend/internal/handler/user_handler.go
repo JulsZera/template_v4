@@ -366,6 +366,15 @@ func TurnoverHandler(w http.ResponseWriter, r *http.Request) {
 		response.Send(w, 400, "Invalid request", nil)
 		return
 	}
+	log.Println("=== TURNOVER REQUEST ===")
+	log.Println("branch_id:", req.BranchID)
+	log.Println("username:", req.Username)
+	log.Println("gameplayid:", req.Gameplayid)
+	log.Println("gameplaynum:", req.Gameplaynum)
+	log.Println("category:", req.Category)
+	log.Println("provider:", req.Provider)
+	log.Println("startdate:", req.StartDate)
+	log.Println("enddate:", req.EndDate)
 
 	resp, err := service.Post(
 		"/account/api/data/turnover",

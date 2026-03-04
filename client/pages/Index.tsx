@@ -223,6 +223,8 @@ useEffect(() => {
 
 //====================END SEO====================//
 
+const SEO_POPUP_KEY = "seo_popup_shown";
+
 useEffect(() => {
   const init = async () => {
     await fetchPageData();
@@ -244,8 +246,11 @@ useEffect(() => {
     setBanners(formatted);
     setDynamicGames(getMostPlay());
 
-    if (popupData && popupData.status === "1") {
+    const popupShown = localStorage.getItem("seo_popup_shown");
+
+    if (user && popupData && popupData.status === "1" && !popupShown) {
       setShowPopup(true);
+      localStorage.setItem("seo_popup_shown", "1");
     }
     // 🔥 TAMBAHKAN INI
     const providers = await fetchAllProviders();
@@ -358,6 +363,34 @@ function parseJwt(token: string) {
   }
 }
 
+function isTokenExpired(token: string) {
+  const decoded = parseJwt(token);
+  if (!decoded?.exp) return true;
+
+  const now = Date.now() / 1000;
+  return decoded.exp < now;
+}
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    const jwt = localStorage.getItem("jwt");
+
+    if (!jwt) return;
+
+    if (isTokenExpired(jwt)) {
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("userData");
+
+      setUser(null);
+
+      toast.error("Session expired, silakan login kembali");
+      setShowSignInModal(true);
+    }
+  }, 10000); // cek tiap 10 detik
+
+  return () => clearInterval(interval);
+}, []);
+
 const handleSignIn = async (e: React.FormEvent) => {
   e.preventDefault();
   setLoginLoading(true);
@@ -377,6 +410,7 @@ const handleSignIn = async (e: React.FormEvent) => {
       // console.log("JWT :", jwt)
 
       localStorage.setItem("jwt", jwt);
+      localStorage.removeItem(SEO_POPUP_KEY);
       setJwtToken(jwt);
 
       // 🔥 HIT PROFILE
@@ -423,6 +457,12 @@ const handleSignIn = async (e: React.FormEvent) => {
       setShowSignInModal(false);
 
       toast.success("Login berhasil 🎉")
+      const shown = localStorage.getItem("seo_popup_shown");
+
+      if (popup?.status === "1" && !shown) {
+        setShowPopup(true);
+        localStorage.setItem("seo_popup_shown", "1");
+      }
     } else {
       setLoginError("Login gagal");
       toast.error("Login Gagal !")
@@ -437,11 +477,6 @@ const handleSignIn = async (e: React.FormEvent) => {
 
 useEffect(() => {
   if (!popup) return;
-
-  if (popup.status === "1") {
-    setShowPopup(true);
-  }
-
 }, [popup]);
 
 //========== POPUP TRANSACTION =============//
@@ -464,6 +499,19 @@ useEffect(() => {
 }, [user]);
 
 const processBalanceResponse = (res: any) => {
+  const serverToken = res?.data?.session_token;
+
+  if (serverToken && serverToken !== user?.sessionToken) {
+    localStorage.removeItem("jwt");
+    localStorage.removeItem("userData");
+
+    setUser(null);
+
+    toast.error("Akun login di device lain");
+    setShowSignInModal(true);
+    return;
+  }
+
   if (!user) return; 
 
   const balanceData = res?.data?.data;
@@ -882,7 +930,6 @@ useEffect(() => {
 };
 
 //=============== TURN OVER =============//
-
 const fetchTurnover = async () => {
   if (!user) return;
 
@@ -900,11 +947,11 @@ const fetchTurnover = async () => {
     gameplaynum: user.gameplaynum,
     category: "All",
     provider: "All",
-    start_date: formatDate(past),
+    start_date: formatDate(today),
     end_date: formatDate(today),
   });
 
-  // console.log("TURNOVER RES:", res);
+  console.log("TURNOVER RES:", res);
 
   if (res?.data?.data) {
     const data = res.data.data;
@@ -936,7 +983,8 @@ useEffect(() => {
               <img 
               src={seoData.logo} 
               alt="Logo"
-              className="h-20 w-auto flex-shrink-0" 
+              onClick={() => navigate("/")}
+              className="h-16 w-auto flex-shrink-0" 
               />
             )}
 
@@ -966,6 +1014,7 @@ useEffect(() => {
                 <img 
                 src={seoData.logo} 
                 alt="Logo"
+                onClick={() => navigate("/")}
                 className="h-28 w-auto flex-shrink-0" 
                 />
               )}
@@ -1248,10 +1297,10 @@ useEffect(() => {
                       className={`px-3 py-1 rounded-full text-xs ${
                         filterType === "all"
                           ? "bg-pink-500 text-white"
-                          : "bg-gray-200"
+                          : "bg-gray-200 text-black"
                       }`}
                     >
-                      Semua Game
+                      Semua
                     </button>
 
                     <button
@@ -1259,7 +1308,7 @@ useEffect(() => {
                       className={`px-3 py-1 rounded-full text-xs ${
                         filterType === "new"
                           ? "bg-pink-500 text-white"
-                          : "bg-gray-200"
+                          : "bg-gray-200 text-black"
                       }`}
                     >
                       New
@@ -1270,7 +1319,7 @@ useEffect(() => {
                       className={`px-3 py-1 rounded-full text-xs ${
                         filterType === "hot"
                           ? "bg-pink-500 text-white"
-                          : "bg-gray-200"
+                          : "bg-gray-200 text-black"
                       }`}
                     >
                       Hot
@@ -1324,15 +1373,19 @@ useEffect(() => {
                 Supported Payment
               </h2>
 
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+              <div
+                className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3"
+                style={{ contentVisibility: "auto" }}
+              >
                 {bankStatus.map((bank, index) => (
                   <div
                     key={index}
-                    className="bg-white/70 backdrop-blur-md rounded-xl p-3 flex items-center justify-center shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105"
+                    className="bg-pink-500 rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
                   >
                     <img
                       src={bank.image}
                       alt={bank.name}
+                      loading="lazy"
                       className="max-h-7 object-contain grayscale hover:grayscale-0 transition-all duration-300"
                     />
                   </div>
@@ -1348,17 +1401,21 @@ useEffect(() => {
                 Provider Game
               </h2>
 
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+              <div
+                className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3"
+                style={{ contentVisibility: "auto" }}
+              >
                 {allProviders
                   .sort((a: any, b: any) => (a.sort_by || 0) - (b.sort_by || 0))
                   .map((provider, index) => (
                     <div
                       key={provider.id || index}
-                      className="bg-white/70 backdrop-blur-md rounded-xl p-3 flex items-center justify-center shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105"
+                      className="bg-pink-500 rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
                     >
                       <img
                         src={provider.image}
                         alt={provider.name}
+                        loading="lazy"
                         className="max-h-8 object-contain grayscale hover:grayscale-0 transition-all duration-300"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = "/placeholder.png";
@@ -1498,6 +1555,7 @@ useEffect(() => {
                       <img 
                       src={seoData.logo} 
                       alt="Logo"
+                      onClick={() => navigate("/")}
                       className="w-auto flex-shrink-0" 
                       />
                     )}
@@ -1739,16 +1797,6 @@ useEffect(() => {
                   {[
                     { icon: "🎁", label: "Credit Free" },
                     { icon: "📢", label: "Promotion" },
-                    { icon: "🎯", label: "Point Free" },
-                    { icon: "🎟️", label: "Coupon" },
-                    { icon: "🎰", label: "Random Box" },
-                    { icon: "🎡", label: "Wheel" },
-                    { icon: "🏆", label: "Ranking" },
-                    { icon: "💰", label: "Earn Money" },
-                    { icon: "💳", label: "Cashback" },
-                    { icon: "✅", label: "Check-in" },
-                    { icon: "🎪", label: "Tournament" },
-                    { icon: "🔄", label: "Exchange" },
                   ].map((item, idx) => (
                     <button
                       key={idx}
@@ -2622,7 +2670,7 @@ useEffect(() => {
                           : "bg-gray-200 text-black"
                       }`}
                     >
-                      Semua Game
+                      Semua
                     </button>
 
                     <button
@@ -2633,7 +2681,7 @@ useEffect(() => {
                           : "bg-gray-200 text-black"
                       }`}
                     >
-                      New Game
+                      New
                     </button>
 
                     <button
@@ -2644,7 +2692,7 @@ useEffect(() => {
                           : "bg-gray-200 text-black"
                       }`}
                     >
-                      Hot Game
+                      Hot
                     </button>
 
                   </div>
@@ -2695,16 +2743,20 @@ useEffect(() => {
               Supported Payment
             </h2>
 
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+            <div
+              className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3"
+              style={{ contentVisibility: "auto" }}
+            >
               {bankStatus.map((bank, index) => (
                 <div
                   key={index}
-                  className="bg-white/70 backdrop-blur-md rounded-xl p-3 flex items-center justify-center shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105"
+                  className="bg-pink-500 rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
                 >
                   <img
                     src={bank.image}
                     alt={bank.name}
-                    className="max-h-7 object-contain grayscale hover:grayscale-0 transition-all duration-300"
+                    loading="lazy"
+                    className="max-h-7 object-contain"
                   />
                 </div>
               ))}
@@ -2719,18 +2771,22 @@ useEffect(() => {
               Provider Game
             </h2>
 
-            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+            <div
+              className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3"
+              style={{ contentVisibility: "auto" }}
+            >
               {allProviders
                 .sort((a: any, b: any) => (a.sort_by || 0) - (b.sort_by || 0))
                 .map((provider, index) => (
                   <div
                     key={provider.id || index}
-                    className="bg-white/70 backdrop-blur-md rounded-xl p-3 flex items-center justify-center shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105"
+                    className="bg-pink-500 rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
                   >
                     <img
                       src={provider.image}
                       alt={provider.name}
-                      className="max-h-8 object-contain grayscale hover:grayscale-0 transition-all duration-300"
+                      loading="lazy"
+                      className="max-h-8 object-contain"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "/placeholder.png";
                       }}
@@ -2860,6 +2916,7 @@ useEffect(() => {
             if (item.id === "home") {
               // Home button - already on logged-in home view
               window.scrollTo(0, 0);
+              navigate('/');
             }
             if (item.id === "promotion") navigate('/promo');
           };
@@ -2982,69 +3039,6 @@ useEffect(() => {
               </button>
             </div>
 
-            {/* Income Menu */}
-            <div className="px-4 mb-4">
-              <h3 className="font-bold text-sm mb-3 text-white drop-shadow">Income Menu</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { icon: "💳", label: "Cashback" },
-                  { icon: "💵", label: "Earn Money" },
-                ].map((item, idx) => (
-                  <button
-                    key={idx}
-                    className="bg-white rounded-lg p-2 text-center hover:shadow-lg transition-all flex flex-col items-center gap-1"
-                  >
-                    <span className="text-2xl">{item.icon}</span>
-                    <span className="text-xs font-bold text-gray-700 line-clamp-2">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Event Menu */}
-            <div className="px-4 mb-4">
-              <h3 className="font-bold text-sm mb-3 text-white drop-shadow">Event Menu</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { icon: "🎁", label: "Credit/Point Free" },
-                  { icon: "🎟️", label: "Coupon" },
-                  { icon: "🎰", label: "Randombox" },
-                  { icon: "🎡", label: "Wheel" },
-                  { icon: "✅", label: "Check In" },
-                  { icon: "🏆", label: "Ranking" },
-                ].map((item, idx) => (
-                  <button
-                    key={idx}
-                    className="bg-white rounded-lg p-2 text-center hover:shadow-lg transition-all flex flex-col items-center gap-1"
-                  >
-                    <span className="text-2xl">{item.icon}</span>
-                    <span className="text-xs font-bold text-gray-700 line-clamp-2">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* More Menu */}
-            <div className="px-4 mb-4">
-              <h3 className="font-bold text-sm mb-3 text-white drop-shadow">More Menu</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { icon: "💬", label: "Contact us" },
-                  { icon: "🇹🇭", label: "Switch language" },
-                  { icon: "📖", label: "Manual" },
-                  { icon: "📱", label: "Download Guild" },
-                ].map((item, idx) => (
-                  <button
-                    key={idx}
-                    className="bg-white rounded-lg p-2 text-center hover:shadow-lg transition-all flex flex-col items-center gap-1"
-                  >
-                    <span className="text-2xl">{item.icon}</span>
-                    <span className="text-xs font-bold text-gray-700 line-clamp-2">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Logout Button */}
             <div className="px-4 mt-auto mb-4">
               <button
@@ -3089,24 +3083,21 @@ useEffect(() => {
               </div>
 
               {/* Wallet Buttons Grid */}
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { icon: "🎁", label: "Credit Free" },
-                  { icon: "📢", label: "Promotion" },
-                  { icon: "🎯", label: "Point Free" },
-                  { icon: "🎟️", label: "Coupon" },
-                  { icon: "🎰", label: "Random Box" },
-                  { icon: "🎡", label: "Wheel" },
-                  { icon: "🏆", label: "Ranking" },
-                  { icon: "💰", label: "Earn Money" },
-                  { icon: "💳", label: "Cashback" },
-                  { icon: "✅", label: "Check-in" },
-                  { icon: "🎪", label: "Tournament" },
-                  { icon: "🔄", label: "Exchange" },
+                  { icon: "💰", label: "Deposit", action: "banking" },
+                  { icon: "💰", label: "Withdraw", action: "banking" },
                 ].map((item, idx) => (
                   <button
                     key={idx}
-                    className="bg-white rounded-lg p-3 text-center hover:shadow-lg transition-all flex flex-col items-center gap-1"
+                    onClick={() => {
+                      setShowMenu(false);
+                      setTimeout(() => {
+                        if (item.action === "banking") navigate("/banking");
+                        if (item.action === "banking") navigate("/banking");
+                      }, 150);
+                    }}
+                    className="bg-white rounded-lg p-2 text-center hover:shadow-lg transition-all flex flex-col items-center gap-1"
                   >
                     <span className="text-2xl">{item.icon}</span>
                     <span className="text-xs font-bold text-gray-700 line-clamp-2">{item.label}</span>
