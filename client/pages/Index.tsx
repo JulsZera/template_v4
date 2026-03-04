@@ -509,14 +509,25 @@ const processBalanceResponse = (res: any) => {
 useEffect(() => {
   if (!user) return;
 
-  const interval = setInterval(async () => {
-    if (!localStorage.getItem("jwt")) return;  // 🔥 guard kedua
+  if (intervalRef.current) return; // 🔥 prevent duplicate
+
+  intervalRef.current = setInterval(async () => {
+    console.log("BALANCE POLL", new Date());
+    if (!localStorage.getItem("jwt")) return;
+
     const res = await getBalance();
     if (!res) return;
-    processBalanceResponse(res);
-  }, 5000);
 
-  return () => clearInterval(interval);
+    processBalanceResponse(res);
+
+  }, 10000);
+
+  return () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
 }, [user]);
 
 const closePopup = async () => {

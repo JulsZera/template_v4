@@ -1,20 +1,55 @@
 import path from "path";
 import { createServer } from "./index";
 import * as express from "express";
+import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware";
 
 const app = createServer();
-const port = process.env.PORT || 3000;
 
-// In production, serve the built SPA files
+// ✅ benerin penulisan port
+const port = Number(process.env.PORT || 3000);
+
+// (opsional) kalau kamu butuh IP real dari LB
+app.set("trust proxy", true);
+
+/**
+ * ✅ Proxy semua /vite/* ke Go lokal
+ * - Go HARUS listen di 127.0.0.1:7714 (bukan 0.0.0.0)
+ * - fixRequestBody penting karena biasanya createServer() sudah pakai body parser,
+ *   tanpa ini POST JSON bisa kekirim kosong ke Go.
+ */
+app.use(
+  "/vite",
+  createProxyMiddleware({
+    // ⚠️ penting: tambahin /vite di target (karena v3 tidak patch req.url)
+    target: "http://127.0.0.1:7714/vite",
+    changeOrigin: true,
+    ws: true,
+    xfwd: true,
+    on: {
+      proxyReq: fixRequestBody,
+      error: (err, req, res) => {
+        // @ts-ignore
+        res.writeHead?.(502, { "Content-Type": "application/json" });
+        // @ts-ignore
+        res.end?.(JSON.stringify({ error: "vite backend unavailable", detail: String(err) }));
+      },
+    },
+  }) as any
+);
+
 const __dirname = import.meta.dirname;
 const distPath = path.join(__dirname, "../spa");
 
-// Serve static files
 app.use(express.static(distPath));
 
-// Handle React Router - serve index.html for all non-API routes
-app.get("/{*any}", (req, res) => {
-  // Don't serve index.html for API routes
+/**
+ * Catch-all SPA untuk GET saja
+ */
+app.get("/{*any}", (req, res, next) => {
+  // kalau /vite/*, biarkan middleware proxy di atas yang handle
+  if (req.path.startsWith("/vite/")) return next();
+
+  // jangan tangani endpoint backend
   if (req.path.startsWith("/api/") || req.path.startsWith("/health")) {
     return res.status(404).json({ error: "API endpoint not found" });
   }
@@ -25,16 +60,5 @@ app.get("/{*any}", (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Fusion Starter server running on port ${port}`);
   console.log(`📱 Frontend: http://localhost:${port}`);
-  console.log(`🔧 API: http://localhost:${port}/api`);
-});
-
-// Graceful shutdown
-process.on("SIGTERM", () => {
-  console.log("🛑 Received SIGTERM, shutting down gracefully");
-  process.exit(0);
-});
-
-process.on("SIGINT", () => {
-  console.log("🛑 Received SIGINT, shutting down gracefully");
-  process.exit(0);
+  console.log(`🔧 Vite API: http://localhost:${port}/vite`);
 });

@@ -24,6 +24,8 @@ func main() {
 		AllowedOrigins: []string{
 			"http://localhost:5173",
 			"http://127.0.0.1:5173",
+			"https://demogacor.demogg.site",
+			"https://www.demogacor.demogg.site",
 		},
 
 		AllowedMethods: []string{
