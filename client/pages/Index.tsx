@@ -754,22 +754,22 @@ useEffect(() => {
   }, [announcements.length]);
 
   // Generate falling angpao and sakura animation
-  useEffect(() => {
-    const generateAngpaos = () => {
-      const newAngpaos = Array.from({ length: 12 }, (_, i) => ({
-        id: Date.now() + i,
-        left: Math.random() * 100,
-        delay: Math.random() * 5,
-        duration: 8 + Math.random() * 4,
-        type: i % 2 === 0 ? 'angpao' : 'sakura' as 'angpao' | 'sakura',
-      }));
-      setAngpaos(newAngpaos);
-    };
+  // useEffect(() => {
+  //   const generateAngpaos = () => {
+  //     const newAngpaos = Array.from({ length: 12 }, (_, i) => ({
+  //       id: Date.now() + i,
+  //       left: Math.random() * 100,
+  //       delay: Math.random() * 5,
+  //       duration: 8 + Math.random() * 4,
+  //       type: i % 2 === 0 ? 'angpao' : 'sakura' as 'angpao' | 'sakura',
+  //     }));
+  //     setAngpaos(newAngpaos);
+  //   };
 
-    generateAngpaos();
-    const interval = setInterval(generateAngpaos, 12000);
-    return () => clearInterval(interval);
-  }, []);
+  //   generateAngpaos();
+  //   const interval = setInterval(generateAngpaos, 12000);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   const languages: { code: Language; name: string; flag: string }[] = [
     { code: "id", name: "Bahasa Indonesia", flag: "🇮🇩" },
@@ -1920,7 +1920,7 @@ useEffect(() => {
           />
         )}
 
-        {/* Falling Angpao & Sakura Animation */}
+        {/* Falling Angpao & Sakura Animation
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-30">
           {angpaos.map((angpao) => (
             <div
@@ -1939,7 +1939,7 @@ useEffect(() => {
               </div>
             </div>
           ))}
-        </div>
+        </div> */}
 
         {/* Keyframes */}
         <style>{`
@@ -2263,7 +2263,7 @@ useEffect(() => {
                 <img 
                 src={seoData.logo} 
                 alt="Logo"
-                className="h-14 w-auto flex-shrink-0" 
+                className="h-10 w-auto flex-shrink-0" 
                 />
               )}
 
@@ -3332,7 +3332,7 @@ useEffect(() => {
         />
       )}
 
-      {/* Falling Angpao & Sakura Animation */}
+      {/* Falling Angpao & Sakura Animation
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-30">
         {angpaos.map((angpao) => (
           <div
@@ -3351,7 +3351,7 @@ useEffect(() => {
             </div>
           </div>
         ))}
-      </div>
+      </div> */}
 
       {/* Keyframes */}
       <style>{`
