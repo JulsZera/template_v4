@@ -44,32 +44,32 @@ const { setUser, setAuthLoading, authLoading } = useUser();
         gameplaynum: parsedUser.gameplaynum,
         function: "dataprofile",
       });
-      const balanceRes = await apiRequest("/balance", "POST");
+      // const balanceRes = await apiRequest("/balance", "POST");
 
       if (!localStorage.getItem("jwt")) {
         // 🔥 Kalau logout di tengah proses
         setAuthLoading(false);
         return;
       }
-      
-      const balanceData = balanceRes?.data?.data;
+
+      // const balanceData = balanceRes?.data?.data;
 
       
-      console.log("RESTORE SESSION START");
-      console.log("JWT:", jwt);
-      console.log("SAVED USER:", savedUser);
-      console.log("PROFILE RES :", profileRes)
-      console.log("BALANCE RES :", balanceRes)
+      // console.log("RESTORE SESSION START");
+      // console.log("JWT:", jwt);
+      // console.log("SAVED USER:", savedUser);
+      // console.log("PROFILE RES :", profileRes)
+      // console.log("BALANCE RES :", balanceRes)
 
       const updatedUser = {
         ...parsedUser, // 🔥 JANGAN HAPUS USERNAME
 
-        balance: Number(balanceData.balance),
-        idr_balance: balanceData.idr_balance,
-        type_wallet: balanceData.type_wallet,
-        id_tier: balanceData.id_tier,
-        tierName: balanceData.name_tier,
-        tierImage: balanceData.tier_image,
+        // balance: Number(balanceData.balance),
+        // idr_balance: balanceData.idr_balance,
+        // type_wallet: balanceData.type_wallet,
+        // id_tier: balanceData.id_tier,
+        // tierName: balanceData.name_tier,
+        // tierImage: balanceData.tier_image,
         referralCode: profileRes?.data?.refferal_code,
       };
 

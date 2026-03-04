@@ -446,8 +446,13 @@ useEffect(() => {
 
 //========== POPUP TRANSACTION =============//
 
+const balanceInitRef = useRef(false);
+
 useEffect(() => {
   if (!user) return;
+
+  if (balanceInitRef.current) return; // 🔥 prevent loop
+  balanceInitRef.current = true;
 
   const initCheck = async () => {
     const res = await getBalance();
@@ -455,6 +460,7 @@ useEffect(() => {
   };
 
   initCheck();
+
 }, [user]);
 
 const processBalanceResponse = (res: any) => {
