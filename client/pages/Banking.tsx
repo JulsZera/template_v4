@@ -122,6 +122,8 @@ useEffect(() => {
       type_wallet: user.type_wallet
     });
 
+    // console.log("RESPONSE:", res);
+
     if (res?.rcode === "00") {
       setAdminWallets(res.data_admin || []);
       setUserBanks(res.data_user || []);
@@ -275,7 +277,9 @@ const bonusAmount = useMemo(() => {
 
 //========= API PROMOTION ==========//
 useEffect(() => {
-  if (!user || activeTab !== "deposit") return;
+  if (!user) return;
+  if (activeTab !== "deposit") return;
+  if (!selectedPaymentMethod) return;
 
   const loadPromo = async () => {
     setLoadingPromo(true);
@@ -287,13 +291,17 @@ useEffect(() => {
       type_wallet: user.type_wallet
     });
 
-    console.log("BRANCH ID:",BRANCH_ID)
-    console.log("Username :",user?.username)
-    console.log("TW :",user.type_wallet)
+    // console.log("BRANCH ID:",BRANCH_ID)
+    // console.log("Username :",user?.username)
+    // console.log("TW :",user.type_wallet)
+
+    // console.log("PROMO RESULT:", res);
+
+    // console.log("PROMO RESULT PARSING:", res?.data?.rcode);
     
 
-    if (res?.rcode === "00") {
-      setPromos(res.data || []);
+    if (res?.data?.rcode === "00") {
+      setPromos(res.data?.data || []);
       // console.log("PROMO :", res.data)
     }
 
@@ -301,7 +309,7 @@ useEffect(() => {
   };
 
   loadPromo();
-}, [user, activeTab, selectedPaymentMethod]);
+}, [user?.username, activeTab, selectedPaymentMethod]);
 
 const amount = Number(depositAmount) || 0;
 
@@ -788,13 +796,10 @@ const paginatedData = historyData.slice(
                         onChange={(e) => setSelectedPromo(e.target.value)}
                         className="w-full px-2 py-1 border-2 rounded text-xs"
                       >
-                        <option value="">Pilih Promo (Opsional)</option>
+                        <option value="">Tanpa Promo</option>
 
                         {promos.map((promo) => (
-                          <option
-                            key={promo.promo_id}
-                            value={promo.promo_id}
-                          >
+                          <option key={promo.promo_id} value={promo.promo_id}>
                             {promo.name} - Bonus {promo.profit_persentase}%
                           </option>
                         ))}

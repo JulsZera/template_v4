@@ -228,6 +228,28 @@ export async function apiRequest(
     // 🔥 selain 401, tetap baca body response
     const json = await response.json();
 
+    // 🔥 HANDLE SESSION INVALID DARI BACKEND
+    if (
+      json?.message === "missing session" ||
+      json?.message === "invalid session" ||
+      json?.rcode === "05"
+    ) {
+      const existingJwt = localStorage.getItem("jwt");
+
+      if (existingJwt) {
+        localStorage.removeItem("jwt");
+        localStorage.removeItem("userData");
+
+        alert("Session telah berakhir, silakan login kembali");
+        window.location.href = "/";
+      }
+
+      return {
+        status: false,
+        message: "Session expired",
+      };
+    }
+
     // kalau status HTTP bukan 2xx,
     // tetap return body dari backend
     if (!response.ok) {

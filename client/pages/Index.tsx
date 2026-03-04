@@ -3005,7 +3005,7 @@ useEffect(() => {
               <h3 className="font-bold text-sm mb-3 text-white drop-shadow">Main Menu</h3>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: "💰", label: "Deposit - Withdraw", action: "banking" },
+                  { icon: "💰", label: "Perbankan", action: "banking" },
                   { icon: "👤", label: "Profile", action: "profiles" },
                   { icon: "📜", label: "History", action: "history" },
                 ].map((item, idx) => (
@@ -3040,7 +3040,7 @@ useEffect(() => {
             </div>
 
             {/* Logout Button */}
-            <div className="px-4 mt-auto mb-4">
+            <div className="px-4 mb-4">
               <button
                 onClick={handleLogout}
                 className="w-full bg-white rounded-lg p-3 text-center hover:shadow-lg transition-all flex items-center justify-center gap-2 font-bold text-red-500"

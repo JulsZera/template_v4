@@ -27,9 +27,9 @@ export default function Promo() {
         username: user.username,
       });
 
-      console.log("BRANCH_ID :", BRANCH_ID)
-      console.log("USERNAME : ",user.username)
-      console.log("RESPONSE: ",res?.data?.rcode)
+      // console.log("BRANCH_ID :", BRANCH_ID)
+      // console.log("USERNAME : ",user.username)
+      // console.log("RESPONSE: ",res?.data?.rcode)
 
       if (res?.data?.rcode === "00") {
         setPromos(res.data?.data ?? []);
