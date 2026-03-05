@@ -133,7 +133,7 @@ useEffect(() => {
       localStorage.removeItem("jwt");
       localStorage.removeItem("userData");
 
-      alert("Session expired karena tidak ada aktivitas");
+      toast.error("Session expired karena tidak ada aktivitas");
       window.location.href = "/";
     }, IDLE_LIMIT);
   };

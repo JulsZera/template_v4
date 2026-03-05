@@ -509,7 +509,7 @@ const Profile = () => {
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword) return;
     if (newPassword !== confirmPassword) {
-      alert("Konfirmasi password tidak cocok");
+      toast.error("Konfirmasi password tidak cocok");
       return;
     }
 
@@ -520,7 +520,7 @@ const Profile = () => {
     });
 
     if (res?.status) {
-      alert("Password berhasil diubah");
+      toast.success("Password berhasil diubah");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -550,12 +550,12 @@ const Profile = () => {
 
   const handleSubmitReferral = async () => {
   if (!identityFile) {
-    alert("Upload file identitas terlebih dahulu");
+    toast.error("Upload file identitas terlebih dahulu");
     return;
   }
 
   if (!referralData.email || !referralData.address || !referralData.bank) {
-    alert("Lengkapi semua data terlebih dahulu");
+    toast.error("Lengkapi semua data terlebih dahulu");
     return;
   }
 
@@ -564,7 +564,7 @@ const Profile = () => {
   );
 
   if (!selectedWallet) {
-    alert("Wallet tidak ditemukan");
+    toast.error("Wallet tidak ditemukan");
     return;
   }
 
@@ -596,14 +596,14 @@ const Profile = () => {
     );
 
     if (res?.status) {
-      alert("Pengajuan referral berhasil dikirim");
+      toast.success("Pengajuan referral berhasil dikirim");
       setReffRequestStatus(0); // langsung jadi pending
     } else {
-      alert(res?.message || "Gagal mengirim referral");
+      toast.error(res?.message || "Gagal mengirim referral");
     }
 
   } catch (err) {
-    alert("Server error");
+    toast.error("Server error");
   } finally {
     setUploadingIdentity(false);
   }
@@ -886,7 +886,7 @@ const Profile = () => {
               <button
                 onClick={() => {
                   if (newBankForm.selectedBank && newBankForm.accountNumber) {
-                    alert("Rekening bank berhasil ditambahkan!");
+                    toast.success("Rekening bank berhasil ditambahkan!");
                     setShowAddBankModal(false);
                     setNewBankForm({ selectedBank: "", accountNumber: "", accountHolder: "supri" });
                   }

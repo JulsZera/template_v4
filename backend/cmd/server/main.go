@@ -58,6 +58,7 @@ func main() {
 		r.Post("/listbank", handler.ListBankPublicHandler)
 		r.Post("/seo-page", handler.GetSeoPageHandler)
 		r.Post("/categories", handler.GetDataCategoryHandler)
+		r.Post("/check-page", handler.GetDataStatusPageHandler)
 
 		log.Println("Route /zera/pagedata registered")
 

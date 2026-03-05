@@ -203,3 +203,28 @@ func GetDataCategoryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(result)
 }
+
+func GetDataStatusPageHandler(w http.ResponseWriter, r *http.Request) {
+
+	var payload map[string]interface{}
+
+	err := json.NewDecoder(r.Body).Decode(&payload)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	result, err := service.Post(
+		"/account/api/content/check_statuspage",
+		payload,
+		"",
+	)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(result)
+}
