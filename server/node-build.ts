@@ -12,16 +12,16 @@ const port = Number(process.env.PORT || 3000);
 app.set("trust proxy", true);
 
 /**
- * ✅ Proxy semua /vite/* ke Go lokal
+ * ✅ Proxy semua /zera/* ke Go lokal
  * - Go HARUS listen di 127.0.0.1:7714 (bukan 0.0.0.0)
  * - fixRequestBody penting karena biasanya createServer() sudah pakai body parser,
  *   tanpa ini POST JSON bisa kekirim kosong ke Go.
  */
 app.use(
-  "/vite",
+  "/zera",
   createProxyMiddleware({
-    // ⚠️ penting: tambahin /vite di target (karena v3 tidak patch req.url)
-    target: "http://127.0.0.1:7714/vite",
+    // ⚠️ penting: tambahin /zera di target (karena v3 tidak patch req.url)
+    target: "http://127.0.0.1:7714/zera",
     changeOrigin: true,
     ws: true,
     xfwd: true,
@@ -31,7 +31,7 @@ app.use(
         // @ts-ignore
         res.writeHead?.(502, { "Content-Type": "application/json" });
         // @ts-ignore
-        res.end?.(JSON.stringify({ error: "vite backend unavailable", detail: String(err) }));
+        res.end?.(JSON.stringify({ error: "zera backend unavailable", detail: String(err) }));
       },
     },
   }) as any
@@ -46,8 +46,8 @@ app.use(express.static(distPath));
  * Catch-all SPA untuk GET saja
  */
 app.get("/{*any}", (req, res, next) => {
-  // kalau /vite/*, biarkan middleware proxy di atas yang handle
-  if (req.path.startsWith("/vite/")) return next();
+  // kalau /zera/*, biarkan middleware proxy di atas yang handle
+  if (req.path.startsWith("/zera/")) return next();
 
   // jangan tangani endpoint backend
   if (req.path.startsWith("/api/") || req.path.startsWith("/health")) {
@@ -60,5 +60,5 @@ app.get("/{*any}", (req, res, next) => {
 app.listen(port, () => {
   console.log(`🚀 Fusion Starter server running on port ${port}`);
   console.log(`📱 Frontend: http://localhost:${port}`);
-  console.log(`🔧 Vite API: http://localhost:${port}/vite`);
+  console.log(`🔧 Vite API: http://localhost:${port}/zera`);
 });

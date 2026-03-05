@@ -22,8 +22,12 @@ func main() {
 	r.Use(cors.Handler(cors.Options{
 
 		AllowedOrigins: []string{
+			"http://localhost:5172",
+			"http://127.0.0.1:5172",
 			"http://localhost:5173",
 			"http://127.0.0.1:5173",
+			"http://localhost:5174",
+			"http://127.0.0.1:5174",
 			"https://demogacor.demogg.site",
 			"https://www.demogacor.demogg.site",
 		},
@@ -43,7 +47,7 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	r.Route("/vite", func(r chi.Router) {
+	r.Route("/zera", func(r chi.Router) {
 
 		r.Post("/login", handler.LoginHandler)
 		r.Post("/register", handler.RegisterHandler)
@@ -55,7 +59,7 @@ func main() {
 		r.Post("/seo-page", handler.GetSeoPageHandler)
 		r.Post("/categories", handler.GetDataCategoryHandler)
 
-		log.Println("Route /vite/pagedata registered")
+		log.Println("Route /zera/pagedata registered")
 
 		r.Group(func(r chi.Router) {
 
