@@ -916,7 +916,7 @@ useEffect(() => {
         id_mapping_provider: game.id_mapping_provider,
         provider_name: game.provider,
         category: game.category,
-        type_game: "0",
+        type_game: "1",
       };
 
       const res = await launchGame(payload);
