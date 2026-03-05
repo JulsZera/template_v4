@@ -5,6 +5,11 @@ import { useUser } from "@/context/UserContext";
 import { apiRequest } from "@/services/api";
 import { COLORS } from "@/config/colors";
 import { uploadWithProgress } from "@/services/api";
+import { fetchSeoPageAPI } from "@/services/seoService";
+import { useLocation } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import bgImage2 from "@/assets/e2279a7a26bd6ebfe974eab10510df738c19d7c01ce07a6a92bb3f9a1b828022.webp";
+import toast from "react-hot-toast";
 
 type Tab = "profile" | "security" | "banking" | "referral" | "statistics";
 
@@ -16,6 +21,169 @@ const Profile = () => {
 
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [loading, setLoading] = useState(false);
+
+  //============ SEO PAGE ================//
+  
+    const location = useLocation();
+    const [seoData, setSeoData] = useState<any>(null);
+  
+      useEffect(() => {
+        const loadSEO = async () => {
+          const seoData = await fetchSeoPageAPI(location.pathname);
+  
+          console.log("RESPONSE SEO BANKING: ", seoData)
+  
+          if (seoData) {
+            setSeoData(seoData);
+          }
+        };
+        loadSEO();
+      }, [location.pathname]);
+  
+      useEffect(() => {
+        if (!seoData) return;
+  
+      /* ================= TITLE ================= */
+  
+        const title =
+          seoData.page_title ||
+          seoData.default_website_title ||
+          seoData.website_name ||
+          document.title;
+  
+        document.title = title;
+  
+        /* ================= META PIXEL ================= */
+  
+        if (seoData.meta_pixel && !document.getElementById("seo-meta-pixel")) {
+          const wrapper = document.createElement("div");
+          wrapper.id = "seo-meta-pixel";
+          wrapper.innerHTML = seoData.meta_pixel;
+  
+          document.head.appendChild(wrapper);
+        }
+  
+      /* ================= META DESCRIPTION ================= */
+  
+        const description =
+          seoData.meta_description ||
+          seoData.running_text ||
+          "";
+  
+        if (description) {
+          let metaDesc = document.querySelector("meta[name='description']");
+  
+          if (!metaDesc) {
+            metaDesc = document.createElement("meta");
+            metaDesc.setAttribute("name", "description");
+            document.head.appendChild(metaDesc);
+          }
+  
+          metaDesc.setAttribute("content", description);
+        }
+  
+  
+      /* ================= META KEYWORDS ================= */
+  
+        if (seoData.meta_keyboard) {
+          let metaKey = document.querySelector("meta[name='keywords']");
+  
+          if (!metaKey) {
+            metaKey = document.createElement("meta");
+            metaKey.setAttribute("name", "keywords");
+            document.head.appendChild(metaKey);
+          }
+  
+          metaKey.setAttribute("content", seoData.meta_keyboard);
+        }
+  
+  
+      /* ================= FAVICON ================= */
+  
+        if (seoData.favicon) {
+          let favicon = document.querySelector("link[rel='icon']");
+  
+          if (!favicon) {
+            favicon = document.createElement("link");
+            favicon.setAttribute("rel", "icon");
+            document.head.appendChild(favicon);
+          }
+  
+          favicon.setAttribute("href", seoData.favicon);
+        }
+  
+  
+      /* ================= CANONICAL ================= */
+  
+        if (seoData.custom_canonical_global) {
+          let canonical = document.querySelector("link[rel='canonical']");
+  
+          if (!canonical) {
+            canonical = document.createElement("link");
+            canonical.setAttribute("rel", "canonical");
+            document.head.appendChild(canonical);
+          }
+  
+          canonical.setAttribute("href", seoData.custom_canonical_global);
+        }
+  
+      /* ================= LIVECHAT ================= */
+  
+        if (seoData.script_livechat && !window.Tawk_API) {
+          const container = document.createElement("div");
+          container.innerHTML = seoData.script_livechat;
+  
+          const scripts = container.querySelectorAll("script");
+  
+          scripts.forEach((oldScript) => {
+            const newScript = document.createElement("script");
+  
+            if (oldScript.src) {
+              newScript.src = oldScript.src;
+              newScript.async = true;
+            } else {
+              newScript.innerHTML = oldScript.innerHTML;
+            }
+  
+            document.body.appendChild(newScript);
+          });
+        }
+  
+  
+      /* ================= CUSTOM HEAD SCRIPT ================= */
+  
+        const headScript =
+          seoData.custom_script_page ||
+          seoData.custom_script_global ||
+          "";
+  
+        if (headScript && !document.getElementById("seo-head-script")) {
+          const wrapper = document.createElement("div");
+          wrapper.id = "seo-head-script";
+          wrapper.innerHTML = headScript;
+  
+          document.head.appendChild(wrapper);
+        }
+  
+  
+      /* ================= CUSTOM BODY SCRIPT ================= */
+  
+        const bodyScript =
+          seoData.custom_script_body_page ||
+          seoData.custom_script_body_global ||
+          "";
+  
+        if (bodyScript && !document.getElementById("seo-body-script")) {
+          const wrapper = document.createElement("div");
+          wrapper.id = "seo-body-script";
+          wrapper.innerHTML = bodyScript;
+  
+          document.body.appendChild(wrapper);
+        }
+  
+      }, [seoData]);
+  
+  //============ END SEO PAGE ================//
 
   /* =========================
      PROFILE STATE
@@ -45,7 +213,7 @@ const Profile = () => {
   const [newBankForm, setNewBankForm] = useState({
     selectedBank: "",
     accountNumber: "",
-    accountHolder: user?.username || "",
+    accountHolder: user?.name || "",
   });
 
   /* =========================
@@ -79,10 +247,96 @@ const Profile = () => {
     provider: "semua_provider",
   });
 
+  const formatStartDate = (date: string) =>
+    `${date} 00:00:00`;
+
+  const formatEndDate = (date: string) =>
+    `${date} 23:59:59`;
+
+  const [datacategories, setCategories] = useState<any[]>([]);
+  const [dataproviders, setProviders] = useState<any[]>([]);
+
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedProvider, setSelectedProvider] = useState("");
+
   const [turnoverData, setTurnoverData] = useState<any[]>([]);
+  const [loadingTurnover, setLoadingTurnover] = useState(false);
   const today = new Date().toISOString().split("T")[0];
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
+
+  const fetchCategories = async () => {
+
+    const res = await apiRequest("/categories", "POST", {
+      branch_id: BRANCH_ID
+    });
+
+    console.log("CATEGORIES:", res)
+
+    if (res?.data_category) {
+      setCategories(res.data_category ?? []);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  
+  const fetchProviders = async (category: string) => {
+    
+    const res = await apiRequest("/provider", "POST", {
+      branch_id: BRANCH_ID,
+      category: category
+    });
+
+    console.log("SELECT CATEGORY PROVIDER:", category)
+    console.log("PROVIDER:", res)
+    
+    if (res?.data_provider) {
+      setProviders(res.data_provider ?? []);
+    }
+  };
+  
+  useEffect(() => {
+
+    if (!selectedCategory) return;
+
+    fetchProviders(selectedCategory);
+
+  }, [selectedCategory]);
+
+  const handleSearchTurnover = async () => {
+
+    if (!user) return;
+
+    setLoadingTurnover(true);
+
+    const res = await apiRequest("/turnover", "POST", {
+      branch_id: BRANCH_ID,
+      username: user.username,
+      gameplayid: user.gameplayid,
+      gameplaynum: user.gameplaynum,
+      category: selectedCategory || "All",
+      provider: selectedProvider || "All",
+      start_date: formatStartDate(startDate),
+      end_date: formatEndDate(endDate),
+    });
+
+    console.log("SELECT CATEGORY:", selectedCategory)
+    console.log("SELECT PROVIDER:", selectedProvider)
+    console.log("TURNOVER:", res)
+
+    if (res?.data?.data) {
+      setTurnoverData(res.data.data);
+      toast.success("Data Turnover 🎉")
+    } else {
+      setTurnoverData([]);
+      toast.error("Belum ada Turnover 🎉")
+    }
+
+    setLoadingTurnover(false);
+  };
 
     /* =========================
      FETCH PROFILE / REFERRAL
@@ -361,11 +615,11 @@ const Profile = () => {
     <div className="space-y-6">
       <div className="bg-pink-100 rounded-xl p-6 border-2" style={{ borderColor: COLORS.primary.main }}>
         <h3 className="text-pink-500 text-sm font-bold mb-4">ℹ️ {t("profile_information") || "Informasi Profil"}</h3>
-        <div className="text-xs text-pink-500 mb-4">{t("account_details") || "Detail Akun"}</div>
+        <div className="text-xs text-pink-500 mb-4">{t("account_details")}</div>
         
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-pink-500">{t("username") || "Nama Pengguna"}</label>
+            <label className="text-xs font-bold text-pink-500">{t("username")}</label>
             <input
               type="text"
               value={profileData.username}
@@ -387,7 +641,7 @@ const Profile = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-pink-500">{t("phone") || "Nomor Telepon"}</label>
+            <label className="text-xs font-bold text-pink-500">{t("phone")}</label>
             <input
               type="text"
               value={profileData.phone}
@@ -398,7 +652,7 @@ const Profile = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-pink-500">{t("account_tier") || "Tier Akun"}</label>
+            <label className="text-xs font-bold text-pink-500">{t("account_tier")}</label>
             <input
               type="text"
               value={profileData.tier}
@@ -409,7 +663,7 @@ const Profile = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-pink-500">{t("total_deposit") || "Total Deposit"}</label>
+            <label className="text-xs font-bold text-pink-500">{t("total_deposit")}</label>
             <input
               type="text"
               value={profileData.totalDeposit}
@@ -427,12 +681,12 @@ const Profile = () => {
   const renderSecurityTab = () => (
     <div className="space-y-6">
       <div className="bg-white rounded-xl p-6 border-2" style={{ borderColor: COLORS.primary.light }}>
-        <h3 className="text-sm font-bold mb-4 text-pink-500">🔐 {t("change_password") || "Ubah Kata Sandi"}</h3>
-        <div className="text-xs text-pink-500 mb-4">{t("update_password_instruction") || "Perbarui kata sandi Anda"}</div>
+        <h3 className="text-sm font-bold mb-4 text-pink-500">🔐 {t("change_password")}</h3>
+        <div className="text-xs text-pink-500 mb-4">{t("update_password_instruction")}</div>
         
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-pink-500">{t("current_password") || "Kata Sandi Saat Ini"} *</label>
+            <label className="text-xs font-bold text-pink-500">{t("current_password")} *</label>
             <input
               type="password"
               value={currentPassword}
@@ -444,7 +698,7 @@ const Profile = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-pink-500">{t("new_password") || "Kata Sandi Baru"} *</label>
+            <label className="text-xs font-bold text-pink-500">{t("new_password")} *</label>
             <input
               type="password"
               value={newPassword}
@@ -456,7 +710,7 @@ const Profile = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-pink-500">{t("confirm_password") || "Konfirmasi Kata Sandi"} *</label>
+            <label className="text-xs font-bold text-pink-500">{t("confirm_password")} *</label>
             <input
               type="password"
               value={confirmPassword}
@@ -538,7 +792,7 @@ const Profile = () => {
           <div className="bg-gray-900 rounded-xl p-6 w-full max-w-md border-2" style={{ borderColor: COLORS.primary.light }}>
             {/* Modal Header */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-white">{t("add_bank") || "Tambah Rekening Bank"}</h2>
+              <h2 className="text-lg font-bold text-white">{t("add_bank")}</h2>
               <button
                 onClick={() => setShowAddBankModal(false)}
                 className="text-white text-2xl font-bold hover:opacity-70"
@@ -551,7 +805,7 @@ const Profile = () => {
             <div className="space-y-4">
               {/* Bank Selection */}
               <div>
-                <label className="text-xs font-bold text-white block mb-2">{t("choose_your_bank") || "Pilih Bank"} *</label>
+                <label className="text-xs font-bold text-white block mb-2">{t("choose_your_bank")} *</label>
                 <select
                   value={newBankForm.selectedBank}
                   onChange={(e) =>
@@ -560,7 +814,7 @@ const Profile = () => {
                   className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border-2 border-gray-700 focus:outline-none"
                   style={{ borderColor: COLORS.primary.light }}
                 >
-                  <option value="">---- PILIH BANK -----</option>
+                  <option value="">---- {t("choose_bank_ewallet")} -----</option>
 
                   {/* GROUP BANK */}
                   <optgroup label="Bank">
@@ -594,7 +848,7 @@ const Profile = () => {
 
               {/* Account Number */}
               <div>
-                <label className="text-xs font-bold text-white block mb-2">{t("account_number") || "Nomor Rekening"} *</label>
+                <label className="text-xs font-bold text-white block mb-2">{t("account_number")} *</label>
                 <input
                   type="text"
                   value={newBankForm.accountNumber}
@@ -607,7 +861,7 @@ const Profile = () => {
 
               {/* Account Holder Name */}
               <div>
-                <label className="text-xs font-bold text-white block mb-2">{t("bank_account_name") || "Nama Pemilik Rekening"} *</label>
+                <label className="text-xs font-bold text-white block mb-2">{t("bank_account_name")} *</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -616,7 +870,7 @@ const Profile = () => {
                     className="w-full px-4 py-3 bg-gray-800 text-white rounded-lg border-2 border-gray-700 focus:outline-none"
                     style={{ borderColor: COLORS.primary.light }}
                   />
-                  <span className="absolute right-4 top-3 text-xs text-yellow-400">(Diambilkan dari data user)</span>
+                  {/* <span className="absolute right-4 top-3 text-xs text-yellow-400">(Diambilkan dari data user)</span> */}
                 </div>
               </div>
             </div>
@@ -627,7 +881,7 @@ const Profile = () => {
                 onClick={() => setShowAddBankModal(false)}
                 className="flex-1 px-4 py-3 rounded-lg font-bold text-sm text-white bg-gray-700 hover:bg-gray-600 transition-all"
               >
-                {t("cancel") || "Batal"}
+                {t("cancel")}
               </button>
               <button
                 onClick={() => {
@@ -640,7 +894,7 @@ const Profile = () => {
                 className="flex-1 px-4 py-3 rounded-lg font-bold text-sm text-white"
                 style={{ backgroundColor: COLORS.secondary.orange }}
               >
-                {t("confirm") || "Simpan"}
+                {t("confirm")}
               </button>
             </div>
           </div>
@@ -670,11 +924,10 @@ const Profile = () => {
               <div className="text-3xl">👥</div>
               <div>
                 <h3 className="text-pink-500 text-sm font-bold">
-                  {t("referral_program") || "Program Referral"}
+                  {t("referral_program")}
                 </h3>
                 <p className="text-xs text-gray-600">
-                  {t("earn_bonus_from_referrals") ||
-                    "Dapatkan bonus dari referral Anda"}
+                  {t("earn_bonus_from_referrals")}
                 </p>
               </div>
             </div>
@@ -761,7 +1014,7 @@ const Profile = () => {
               {/* BANK FROM WALLET */}
               <div>
                 <label className="text-xs font-bold text-pink-500">
-                  Bank / E-Wallet *
+                  {t("bank_ewallet")} *
                 </label>
                 <select
                   disabled={isPending}
@@ -776,7 +1029,7 @@ const Profile = () => {
                   style={{ borderColor: COLORS.primary.light }}
                 >
                   <option value="">
-                    Pilih rekening Anda
+                    --- {t("choose_bank_ewallet")} ---
                   </option>
 
                   {bankAccounts.map((wallet: any) => (
@@ -793,7 +1046,7 @@ const Profile = () => {
               {/* UPLOAD IDENTITAS */}
               <div>
                 <label className="text-xs font-bold text-pink-500">
-                  File Identitas (KTP/SIM/Passport) *
+                  {t("identity_file")} *
                 </label>
 
                 <div
@@ -815,9 +1068,7 @@ const Profile = () => {
                   >
                     <p className="text-4xl mb-2">🪪</p>
                     <p className="font-bold text-gray-700">
-                      {identityFile
-                        ? identityFile.name
-                        : "Klik untuk upload file identitas"}
+                      {identityFile ? identityFile.name : t("click_upload_identity")}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                       Format: JPG / PNG - Maks 10MB
@@ -868,7 +1119,7 @@ const Profile = () => {
                       : COLORS.secondary.orange,
                 }}
               >
-                {uploadingIdentity ? "Mengupload..." : "Kirim Aplikasi"}
+                {uploadingIdentity ? "Uploading...." : t("send_application")}
               </button>
 
             </div>
@@ -884,7 +1135,7 @@ const Profile = () => {
             style={{ borderColor: COLORS.primary.light }}
           >
             <h3 className="text-sm font-bold mb-4">
-              🌳 {t("referral_tree") || "Pohon Referral"}
+              🌳 {t("referral_tree")}
             </h3>
 
             <div className="text-right mb-4">
@@ -961,34 +1212,43 @@ const Profile = () => {
             <div>
               <label className="text-xs font-bold text-pink-500">{t("category") || "Kategori"}</label>
               <select
-                value={statsFilter.category}
-                onChange={(e) => setStatsFilter({ ...statsFilter, category: e.target.value })}
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
                 className="text-gray-600 w-full mt-2 px-3 py-2 border-2 rounded-lg text-sm"
                 style={{ borderColor: COLORS.primary.light }}
               >
-                <option value="semua_kategori">{t("all_categories") || "Semua Kategori"}</option>
-                <option value="slot">{t("slot") || "Slot"}</option>
-                <option value="casino">{t("casino") || "Casino"}</option>
+                <option value="">Semua Kategori</option>
+
+                {datacategories.map((cat) => (
+                  <option key={cat.id} value={cat.category}>
+                    {cat.display_category}
+                  </option>
+                ))}
+
               </select>
             </div>
 
             <div>
               <label className="text-xs font-bold text-pink-500">{t("provider") || "Provider"}</label>
               <select
-                value={statsFilter.provider}
-                onChange={(e) => setStatsFilter({ ...statsFilter, provider: e.target.value })}
+                value={selectedProvider}
+                onChange={(e) => setSelectedProvider(e.target.value)}
                 className="text-gray-600 w-full mt-2 px-3 py-2 border-2 rounded-lg text-sm"
                 style={{ borderColor: COLORS.primary.light }}
               >
-                <option value="semua_provider">{t("all_providers") || "Semua Provider"}</option>
-                <option value="provider1">Provider 1</option>
-                <option value="provider2">Provider 2</option>
+                <option value="">Semua Provider</option>
+
+                {dataproviders.map((prov) => (
+                  <option key={prov.id_mapping_provider} value={prov.provider_name}>
+                    {prov.provider_display}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
           <button
-            onClick={() => alert("Mencari data...")}
+            onClick={handleSearchTurnover}
             className="bg-pink-500 w-full mt-4 px-4 py-2 rounded-lg font-bold text-sm text-white"
             style={{ backgroundColor: COLORS.primary.main }}
           >
@@ -1044,16 +1304,32 @@ const Profile = () => {
   ];
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: COLORS.background.page }}>
+    <div className="w-screen min-h-screen pb-24 md:pb-0 relative overflow-x-hidden"
+      style={{
+        backgroundImage: `url(${bgImage2})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
+      }}
+      >
       {/* Header */}
       <div className="flex items-center justify-between px-4 md:px-8 py-6 bg-pink-300 border-b-2" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)", borderColor: COLORS.primary.main }}>
-        <button onClick={handleBackClick} className="text-gray-800 text-5xl font-bold">←</button>
-        <h1 className="text-gray-800 text-xl font-bold flex-1 text-center">{t("profile_settings") || "Pengaturan Profil"}</h1>
+        <button onClick={handleBackClick} className="text-white text-5xl font-bold">
+          <ArrowLeft size={24} />
+        </button>
+        {seoData?.logo && (
+            <img 
+            src={seoData.logo} 
+            alt="Logo"
+            onClick={() => navigate("/")}
+            className="h-16 w-auto flex-shrink-0" 
+            />
+          )}
         <div className="w-12"></div>
       </div>
 
       {/* User Info Board */}
-      <div className="px-4 md:px-8 py-6 bg-white border-b-2" style={{ background:"#FFC1DA", borderColor: COLORS.primary.main }}>
+      <div className="px-4 md:px-8 py-6 border-b-2 bg-pink-50" style={{ borderColor: COLORS.primary.main }}>
         <div className="flex items-center gap-6">
           <div className="flex-shrink-0">
             <div className="text-8xl">
@@ -1121,6 +1397,13 @@ const Profile = () => {
           </div>
         </div>
       </div>
+      {seoData?.custom_footer && (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: seoData.custom_footer
+          }}
+        />
+      )}
 
       {/* Tab Content */}
       <div className="px-4 md:px-8 py-6 min-h-screen">

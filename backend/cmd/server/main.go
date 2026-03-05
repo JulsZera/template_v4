@@ -52,6 +52,8 @@ func main() {
 		r.Post("/gamelist", handler.GetDataListGameHandler)
 		r.Post("/provider", handler.GetDataProviderHandler)
 		r.Post("/listbank", handler.ListBankPublicHandler)
+		r.Post("/seo-page", handler.GetSeoPageHandler)
+		r.Post("/categories", handler.GetDataCategoryHandler)
 
 		log.Println("Route /vite/pagedata registered")
 

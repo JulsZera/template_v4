@@ -15,6 +15,8 @@ import { getPopup } from "@/services/api";
 import toast from "react-hot-toast";
 import { useUser } from "@/context/UserContext";
 import { COLORS } from "@/config/colors";
+import bgImage from "@/assets/48dc4f2dde91b5b233141fd752d6c50d471e32a7c556558002c6f4b6eb74a053.webp";
+
 
 export default function Index() {
   const location = useLocation();
@@ -54,8 +56,7 @@ export default function Index() {
   const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [allProviders, setAllProviders] = useState<ProviderData[]>([]);
-  
-  // const [turnover, setTurnover ] = useState<any>(null);
+  const [turnover, setTurnover ] = useState({totaltrx: 0, totalto: ""});
 
   // useEffect(() => {
   //   console.log("USER DI INDEX:", user);
@@ -67,150 +68,150 @@ export default function Index() {
 
 //================   S  E  O   ==================//
 
-const injectScript = (id: string, content: string, target: "head" | "body" = "head") => {
-  if (!content) return;
+ useEffect(() => {
+      if (!seoData) return;
 
-  if (document.getElementById(id)) return;
+    /* ================= TITLE ================= */
 
-  const script = document.createElement("script");
-  script.id = id;
-  script.innerHTML = content;
+      const title =
+        seoData.page_title ||
+        seoData.default_website_title ||
+        seoData.website_name ||
+        document.title;
 
-  if (target === "head") {
-    document.head.appendChild(script);
-  } else {
-    document.body.appendChild(script);
-  }
-};
+      document.title = title;
 
-const injectHTML = (id: string, html: string, target: "head" | "body" = "body") => {
-  if (!html) return;
+      /* ================= META PIXEL ================= */
 
-  if (document.getElementById(id)) return;
+      if (seoData.meta_pixel && !document.getElementById("seo-meta-pixel")) {
+        const wrapper = document.createElement("div");
+        wrapper.id = "seo-meta-pixel";
+        wrapper.innerHTML = seoData.meta_pixel;
 
-  const container = document.createElement("div");
-  container.id = id;
-  container.innerHTML = html;
+        document.head.appendChild(wrapper);
+      }
 
-  if (target === "head") {
-    document.head.appendChild(container);
-  } else {
-    document.body.appendChild(container);
-  }
-};
+    /* ================= META DESCRIPTION ================= */
 
-const setMetaTag = (property: string, content: string) => {
-  let element = document.querySelector(`meta[property='${property}']`);
-  if (!element) {
-    element = document.createElement("meta");
-    element.setAttribute("property", property);
-    document.head.appendChild(element);
-  }
-  element.setAttribute("content", content);
-};
+      const description =
+        seoData.meta_description ||
+        seoData.running_text ||
+        "";
 
-const setNameMeta = (name: string, content: string) => {
-  let element = document.querySelector(`meta[name='${name}']`);
-  if (!element) {
-    element = document.createElement("meta");
-    element.setAttribute("name", name);
-    document.head.appendChild(element);
-  }
-  element.setAttribute("content", content);
-};
+      if (description) {
+        let metaDesc = document.querySelector("meta[name='description']");
 
-const injectRawHTML = (id: string, content: string, target: "head" | "body" = "head") => {
-  if (!content) return;
+        if (!metaDesc) {
+          metaDesc = document.createElement("meta");
+          metaDesc.setAttribute("name", "description");
+          document.head.appendChild(metaDesc);
+        }
 
-  if (document.getElementById(id)) return;
+        metaDesc.setAttribute("content", description);
+      }
 
-  const container = document.createElement("div");
-  container.id = id;
-  container.innerHTML = content;
 
-  if (target === "head") {
-    document.head.appendChild(container);
-  } else {
-    document.body.appendChild(container);
-  }
-};
+    /* ================= META KEYWORDS ================= */
 
-useEffect(() => {
-  if (!seoData) return;
+      if (seoData.meta_keyboard) {
+        let metaKey = document.querySelector("meta[name='keywords']");
 
-  // ===============================
-  // CANONICAL
-  // ===============================
-  if (seoData.custom_canonical_global) {
-    let link = document.querySelector("link[rel='canonical']");
-    if (!link) {
-      link = document.createElement("link");
-      link.setAttribute("rel", "canonical");
-      document.head.appendChild(link);
-    }
-    link.setAttribute("href", seoData.custom_canonical_global);
-  }
+        if (!metaKey) {
+          metaKey = document.createElement("meta");
+          metaKey.setAttribute("name", "keywords");
+          document.head.appendChild(metaKey);
+        }
 
-  // ===============================
-  // META PIXEL (Tiktok / GTM)
-  // ===============================
-  if (seoData.meta_pixel) {
-    injectRawHTML("meta_pixel_script", seoData.meta_pixel, "head");
-  }
+        metaKey.setAttribute("content", seoData.meta_keyboard);
+      }
 
-  // ===============================
-  // GLOBAL HEAD SCRIPT
-  // ===============================
-  if (seoData.custom_script_global) {
-    injectRawHTML("custom_script_global", seoData.custom_script_global, "head");
-  }
 
-  // ===============================
-  // GLOBAL BODY SCRIPT
-  // ===============================
-  if (seoData.custom_script_body_global) {
-    injectRawHTML("custom_script_body_global", seoData.custom_script_body_global, "body");
-  }
+    /* ================= FAVICON ================= */
 
-  // ===============================
-  // PAGE SCRIPT
-  // ===============================
-  if (seoData.custom_script_page) {
-    injectRawHTML("custom_script_page", seoData.custom_script_page, "body");
-  }
+      if (seoData.favicon) {
+        let favicon = document.querySelector("link[rel='icon']");
 
-  // ===============================
-  // LIVECHAT
-  // ===============================
-  if (seoData.script_livechat) {
-    injectRawHTML("livechat_script", seoData.script_livechat, "body");
-  }
+        if (!favicon) {
+          favicon = document.createElement("link");
+          favicon.setAttribute("rel", "icon");
+          document.head.appendChild(favicon);
+        }
 
-}, [seoData]);
+        favicon.setAttribute("href", seoData.favicon);
+      }
 
-useEffect(() => {
-  if (!seoData) return;
 
-  document.title =
-    seoData.default_website_title || seoData.website_name;
+    /* ================= CANONICAL ================= */
 
-  const desc = seoData.running_text || "";
+      if (seoData.custom_canonical_global) {
+        let canonical = document.querySelector("link[rel='canonical']");
 
-  setNameMeta("description", desc);
-  setMetaTag("og:title", seoData.default_website_title || "");
-  setMetaTag("og:description", desc);
-  setMetaTag("og:image", seoData.logo || "");
+        if (!canonical) {
+          canonical = document.createElement("link");
+          canonical.setAttribute("rel", "canonical");
+          document.head.appendChild(canonical);
+        }
 
-  // 🔥 Inject custom head script
-  injectScript("seo-head-script", seoData.script_head, "head");
+        canonical.setAttribute("href", seoData.custom_canonical_global);
+      }
 
-  // 🔥 Inject body script
-  injectScript("seo-body-script", seoData.script_body, "body");
+    /* ================= LIVECHAT ================= */
 
-  // 🔥 Inject custom HTML
-  injectHTML("seo-custom-html", seoData.custom_html, "body");
+      if (seoData.script_livechat && !window.Tawk_API) {
+        const container = document.createElement("div");
+        container.innerHTML = seoData.script_livechat;
 
-}, [seoData]);
+        const scripts = container.querySelectorAll("script");
+
+        scripts.forEach((oldScript) => {
+          const newScript = document.createElement("script");
+
+          if (oldScript.src) {
+            newScript.src = oldScript.src;
+            newScript.async = true;
+          } else {
+            newScript.innerHTML = oldScript.innerHTML;
+          }
+
+          document.body.appendChild(newScript);
+        });
+      }
+
+
+    /* ================= CUSTOM HEAD SCRIPT ================= */
+
+      const headScript =
+        seoData.custom_script_page ||
+        seoData.custom_script_global ||
+        "";
+
+      if (headScript && !document.getElementById("seo-head-script")) {
+        const wrapper = document.createElement("div");
+        wrapper.id = "seo-head-script";
+        wrapper.innerHTML = headScript;
+
+        document.head.appendChild(wrapper);
+      }
+
+
+    /* ================= CUSTOM BODY SCRIPT ================= */
+
+      const bodyScript =
+        seoData.custom_script_body_page ||
+        seoData.custom_script_body_global ||
+        "";
+
+      if (bodyScript && !document.getElementById("seo-body-script")) {
+        const wrapper = document.createElement("div");
+        wrapper.id = "seo-body-script";
+        wrapper.innerHTML = bodyScript;
+
+        document.body.appendChild(wrapper);
+      }
+
+    }, [seoData]);
+
+//============ END SEO PAGE ================//
 
 useEffect(() => {
   if (!seoData) return;
@@ -451,6 +452,7 @@ const handleSignIn = async (e: React.FormEvent) => {
       // console.log("USER AFTER SET:", userData);
       // console.log("FULL LOGIN RESPONSE:", res);
       localStorage.setItem("userData", JSON.stringify(userData));
+      localStorage.setItem("sessionToken", decoded?.token);
       processBalanceResponse(balanceRes);
       // setAuthLoading(false); // 🔥 TAMBAHKAN DI SINI
       // console.log("SET USER SUCCESS");
@@ -492,7 +494,9 @@ useEffect(() => {
   const initCheck = async () => {
     const res = await getBalance();
     processBalanceResponse(res);
+    console.log("BALANCE 1:",res)
   };
+
 
   initCheck();
 
@@ -572,9 +576,24 @@ useEffect(() => {
     const res = await getBalance();
     if (!res) return;
 
+    // HANDLE SESSION EXPIRED
+    if (res?.data?.rcode !== "00") {
+
+      console.log("SESSION EXPIRED DETECTED");
+
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("userData");
+
+      window.dispatchEvent(new Event("session-expired"));
+
+      return;
+    }
+
     processBalanceResponse(res);
 
-  }, 10000);
+
+
+  }, 5000);
 
   return () => {
     if (intervalRef.current) {
@@ -947,19 +966,19 @@ const fetchTurnover = async () => {
     gameplaynum: user.gameplaynum,
     category: "All",
     provider: "All",
-    start_date: formatDate(today),
+    start_date: formatDate(past),
     end_date: formatDate(today),
   });
 
   console.log("TURNOVER RES:", res);
 
   if (res?.data?.data) {
-    const data = res.data.data;
+    const data = res.data;
 
-    // setTurnover({
-    //   current: data.total_turnover ?? "0.00",
-    //   target: data.target_turnover ?? "0.00",
-    // });
+    setTurnover({
+      totaltrx: data.total_trx ?? 0,
+      totalto: data.total_turnover ?? "",
+    });
   }
 };
 
@@ -974,7 +993,14 @@ useEffect(() => {
   // LOGGED OUT VIEW
   if (!user) {
   return (
-      <div className="w-screen min-h-screen pb-24 md:pb-0 relative overflow-x-hidden" style={{ backgroundColor: "#F1C8D6" }}>
+      <div className="w-screen min-h-screen pb-24 md:pb-0 relative overflow-x-hidden"
+      style={{
+        backgroundImage: `url(${bgImage})`,
+        backgroundSize: "contain",
+        backgroundPosition: "center",
+        backgroundRepeat: "repeat"
+      }}
+      >
         {/* Header */}
         <header className="sticky top-0 z-40 shadow-lg" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}>
           {/* Mobile Header - Logged Out */}
@@ -1464,7 +1490,18 @@ useEffect(() => {
                 }
               }
               if (item.id === "home") {
-                // Already on home, could scroll to top if needed
+                if (location.pathname !== '/') {
+                  navigate('/');
+                  setTimeout(() => {
+                    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                    document.documentElement.scrollTop = 0;
+                    document.body.scrollTop = 0;
+                  }, 100);
+                } else {
+                  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                  document.documentElement.scrollTop = 0;
+                  document.body.scrollTop = 0;
+                }
               }
             };
 
@@ -1783,12 +1820,11 @@ useEffect(() => {
                     💰
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-bold text-gray-700">Credit Balance</p>
+                    <p className="text-sm font-bold text-gray-700">Saldo Saat ini</p>
                     <p className="text-2xl font-bold text-pink-500">{user?.idr_balance ?? "0.00"}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-600">Promotion</p>
-                    <p className="text-sm font-bold text-gray-700">Turnover<br/>0.00/0.00</p>
+                    <p className="text-sm font-bold text-gray-700">Turnover<br/>{turnover.totalto}/{turnover.totaltrx}</p>
                   </div>
                 </div>
 
@@ -1887,7 +1923,7 @@ useEffect(() => {
               <div className="px-6 py-4 space-y-4">
                 {/* Turnover Info */}
                 <div className="bg-gray-500 rounded-lg p-3 text-white text-sm font-bold text-center">
-                  Turnover 0.00/0.00 Max Withdraw
+                  <p className="text-sm font-bold text-gray-700">Turnover<br/>{turnover.totalto}/{turnover.totaltrx}</p>
                 </div>
 
                 {/* Bank Selection */}
@@ -2298,7 +2334,15 @@ useEffect(() => {
 
   // LOGGED IN VIEW
   return (
-    <div className="w-screen min-h-screen pb-24 md:pb-0 relative overflow-x-hidden" style={{ backgroundColor: "#F1C8D6" }}>
+    <div className="w-screen min-h-screen pb-24 md:pb-0 relative overflow-x-hidden"
+    style={{
+      backgroundImage: `url(${bgImage})`,
+      backgroundSize: "contain",
+      backgroundPosition: "center",
+      backgroundRepeat: "repeat"
+    }}
+    >
+      
       {/* Header */}
       <header className="sticky top-0 z-40 shadow-lg" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}>
         {/* Mobile Header - Logged In */}
@@ -2325,7 +2369,7 @@ useEffect(() => {
 
           {/* Deposit Button (with animation) */}
           <button
-            onClick={() => setShowP2PModal(true)}
+            onClick={() => navigate("/banking")}
             className="text-white font-bold px-4 py-2 rounded-full text-xs transition-all deposit-button hover:shadow-lg flex-shrink-0"
             style={{ background: "#00D4FF" }}
           >
@@ -2396,17 +2440,14 @@ useEffect(() => {
               )}
             </div>
             <button
-              onClick={() => setShowP2PModal(true)}
+              onClick={() => navigate("/banking")}
               className="text-white font-bold px-8 py-3 rounded-full text-sm transition-all deposit-button hover:shadow-2xl"
               style={{ background: "#00D4FF" }}
             >
               {t("deposit")}
             </button>
             <button
-              onClick={() => {
-                setShowP2PModal(true);
-                setP2pActiveTab("withdraw");
-              }}
+              onClick={() => navigate("/banking")}
               className="text-white font-bold px-6 py-3 rounded-full text-sm transition-all hover:shadow-lg"
               style={{ background: "#F178A1" }}
             >
@@ -2750,7 +2791,8 @@ useEffect(() => {
               {bankStatus.map((bank, index) => (
                 <div
                   key={index}
-                  className="bg-pink-500 rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
+                  className="rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
+                  style={{ background: "linear-gradient(180deg, #F178A1 0%, #FFC1DA 100%)" }}
                 >
                   <img
                     src={bank.image}
@@ -2780,7 +2822,8 @@ useEffect(() => {
                 .map((provider, index) => (
                   <div
                     key={provider.id || index}
-                    className="bg-pink-500 rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
+                    className="rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
+                    style={{ background: "linear-gradient(180deg, #F178A1 0%, #FFC1DA 100%)" }}
                   >
                     <img
                       src={provider.image}
@@ -2888,17 +2931,6 @@ useEffect(() => {
           </div>
         )}
 
-        {seoData?.link_livechat && (
-          <a
-            href={seoData.link_livechat}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="fixed bottom-6 right-6 bg-green-500 text-white px-4 py-2 rounded-full shadow-lg z-50"
-          >
-            Live Chat
-          </a>
-        )}
-
       {/* Bottom Navigation - Logged In View */}
       <nav className="bottom-nav fixed bottom-0 left-0 right-0 px-2 py-2 flex justify-around items-center z-50 shadow-2xl" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}>
         {/* Wallet Button (replaces Sign In) */}
@@ -2914,10 +2946,19 @@ useEffect(() => {
           const handleClick = () => {
             if (item.id === "hubkami") setShowContactUsModal(true);
             if (item.id === "home") {
-              // Home button - already on logged-in home view
-              window.scrollTo(0, 0);
-              navigate('/');
-            }
+                if (location.pathname !== '/') {
+                  navigate('/');
+                  setTimeout(() => {
+                    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                    document.documentElement.scrollTop = 0;
+                    document.body.scrollTop = 0;
+                  }, 100);
+                } else {
+                  window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+                  document.documentElement.scrollTop = 0;
+                  document.body.scrollTop = 0;
+                }
+              }
             if (item.id === "promotion") navigate('/promo');
           };
 
@@ -3073,12 +3114,11 @@ useEffect(() => {
                   💰
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-700">Credit Balance</p>
+                  <p className="text-sm font-bold text-gray-700">Saldo Saat ini</p>
                   <p className="text-1xl font-bold text-pink-500">{user?.idr_balance ?? "0.00"}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-gray-600">Promotion</p>
-                  <p className="text-sm font-bold text-gray-700">Turnover<br/>0.00/0.00</p>
+                  <p className="text-sm font-bold text-gray-700">Turnover<br/>{turnover.totalto}/{turnover.totaltrx}</p>
                 </div>
               </div>
 

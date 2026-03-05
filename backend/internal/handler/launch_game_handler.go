@@ -62,7 +62,7 @@ func LaunchGameHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("DOMAIN :", config.DOMAIN)
 	log.Println("DOMAIN BANK :", config.DOMAIN_BANKING)
 
-	if claims.BranchID == "" || claims.Username == "" {
+	if config.BRANCH_ID == "" || claims.Username == "" {
 		response.Send(w, 400, "Missing required fields", nil)
 		return
 	}

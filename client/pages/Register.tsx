@@ -5,6 +5,9 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { useUser } from "@/context/UserContext";
 import { apiRequest } from "@/services/api";
+import { fetchSeoPageAPI } from "@/services/seoService";
+import { useLocation } from "react-router-dom";
+import bgImage2 from "@/assets/e2279a7a26bd6ebfe974eab10510df738c19d7c01ce07a6a92bb3f9a1b828022.webp";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -26,6 +29,170 @@ export default function Register() {
 
   const [loading, setLoading] = useState(false)
   const [bankList, setBankList] = useState<any[]>([]);
+   const [bankOptions, setBankOptions] = useState<any[]>([]);
+
+  //============ SEO PAGE ================//
+  
+    const location = useLocation();
+    const [seoData, setSeoData] = useState<any>(null);
+  
+      useEffect(() => {
+        const loadSEO = async () => {
+          const seoData = await fetchSeoPageAPI(location.pathname);
+  
+          console.log("RESPONSE SEO BANKING: ", seoData)
+  
+          if (seoData) {
+            setSeoData(seoData);
+          }
+        };
+        loadSEO();
+      }, [location.pathname]);
+  
+      useEffect(() => {
+        if (!seoData) return;
+  
+      /* ================= TITLE ================= */
+  
+        const title =
+          seoData.page_title ||
+          seoData.default_website_title ||
+          seoData.website_name ||
+          document.title;
+  
+        document.title = title;
+  
+        /* ================= META PIXEL ================= */
+  
+        if (seoData.meta_pixel && !document.getElementById("seo-meta-pixel")) {
+          const wrapper = document.createElement("div");
+          wrapper.id = "seo-meta-pixel";
+          wrapper.innerHTML = seoData.meta_pixel;
+  
+          document.head.appendChild(wrapper);
+        }
+  
+      /* ================= META DESCRIPTION ================= */
+  
+        const description =
+          seoData.meta_description ||
+          seoData.running_text ||
+          "";
+  
+        if (description) {
+          let metaDesc = document.querySelector("meta[name='description']");
+  
+          if (!metaDesc) {
+            metaDesc = document.createElement("meta");
+            metaDesc.setAttribute("name", "description");
+            document.head.appendChild(metaDesc);
+          }
+  
+          metaDesc.setAttribute("content", description);
+        }
+  
+  
+      /* ================= META KEYWORDS ================= */
+  
+        if (seoData.meta_keyboard) {
+          let metaKey = document.querySelector("meta[name='keywords']");
+  
+          if (!metaKey) {
+            metaKey = document.createElement("meta");
+            metaKey.setAttribute("name", "keywords");
+            document.head.appendChild(metaKey);
+          }
+  
+          metaKey.setAttribute("content", seoData.meta_keyboard);
+        }
+  
+  
+      /* ================= FAVICON ================= */
+  
+        if (seoData.favicon) {
+          let favicon = document.querySelector("link[rel='icon']");
+  
+          if (!favicon) {
+            favicon = document.createElement("link");
+            favicon.setAttribute("rel", "icon");
+            document.head.appendChild(favicon);
+          }
+  
+          favicon.setAttribute("href", seoData.favicon);
+        }
+  
+  
+      /* ================= CANONICAL ================= */
+  
+        if (seoData.custom_canonical_global) {
+          let canonical = document.querySelector("link[rel='canonical']");
+  
+          if (!canonical) {
+            canonical = document.createElement("link");
+            canonical.setAttribute("rel", "canonical");
+            document.head.appendChild(canonical);
+          }
+  
+          canonical.setAttribute("href", seoData.custom_canonical_global);
+        }
+  
+      /* ================= LIVECHAT ================= */
+  
+        if (seoData.script_livechat && !window.Tawk_API) {
+          const container = document.createElement("div");
+          container.innerHTML = seoData.script_livechat;
+  
+          const scripts = container.querySelectorAll("script");
+  
+          scripts.forEach((oldScript) => {
+            const newScript = document.createElement("script");
+  
+            if (oldScript.src) {
+              newScript.src = oldScript.src;
+              newScript.async = true;
+            } else {
+              newScript.innerHTML = oldScript.innerHTML;
+            }
+  
+            document.body.appendChild(newScript);
+          });
+        }
+  
+  
+      /* ================= CUSTOM HEAD SCRIPT ================= */
+  
+        const headScript =
+          seoData.custom_script_page ||
+          seoData.custom_script_global ||
+          "";
+  
+        if (headScript && !document.getElementById("seo-head-script")) {
+          const wrapper = document.createElement("div");
+          wrapper.id = "seo-head-script";
+          wrapper.innerHTML = headScript;
+  
+          document.head.appendChild(wrapper);
+        }
+  
+  
+      /* ================= CUSTOM BODY SCRIPT ================= */
+  
+        const bodyScript =
+          seoData.custom_script_body_page ||
+          seoData.custom_script_body_global ||
+          "";
+  
+        if (bodyScript && !document.getElementById("seo-body-script")) {
+          const wrapper = document.createElement("div");
+          wrapper.id = "seo-body-script";
+          wrapper.innerHTML = bodyScript;
+  
+          document.body.appendChild(wrapper);
+        }
+  
+      }, [seoData]);
+  
+  //============ END SEO PAGE ================//
 
   useEffect(() => {
     const fetchBank = async () => {
@@ -33,10 +200,10 @@ export default function Register() {
         branch_id: BRANCH_ID,
       });
 
-      // console.log("BANK RES:", res);
+      console.log("BANK RES:", res);
 
       if (res?.data?.data) {
-        setBankList(res.data.data);
+        setBankOptions(res.data.data);
       }
     };
 
@@ -114,7 +281,14 @@ export default function Register() {
   };
 
   return (
-    <div className="w-screen min-h-screen pb-24 relative overflow-x-hidden" style={{ backgroundColor: "#F1C8D6" }}>
+    <div className="w-screen min-h-screen pb-24 md:pb-0 relative overflow-x-hidden"
+      style={{
+        backgroundImage: `url(${bgImage2})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
+      }}
+    >
       {/* Header */}
       <header className="sticky top-0 z-40 shadow-lg" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}>
         <div className="flex items-center justify-between px-4 py-3">
@@ -125,11 +299,14 @@ export default function Register() {
             <ArrowLeft size={24} />
           </button>
           {/* Logo instead of text title */}
-          <img
-            src="https://cdn.builder.io/o/assets%2Fde66772a80b6454ba51a7d50705077af%2F505602f2656f48249f1160282bd42950?alt=media&token=92a16de5-eb86-4192-adc2-da425247540d&apiKey=de66772a80b6454ba51a7d50705077af"
+          {seoData?.logo && (
+            <img 
+            src={seoData.logo} 
             alt="Logo"
-            className="h-10 w-auto"
-          />
+            onClick={() => navigate("/")}
+            className="h-16 w-auto flex-shrink-0" 
+            />
+          )}
           <div className="w-10"></div>
         </div>
       </header>
@@ -156,7 +333,7 @@ export default function Register() {
                   onChange={(e) => setUsername(e.target.value)}
                   required
                   placeholder={t("username")}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
+                  className="text-gray-700 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
                 />
               </div>
 
@@ -172,7 +349,7 @@ export default function Register() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder={t("email")}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
+                  className="text-gray-700 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
                 />
               </div>
 
@@ -188,7 +365,7 @@ export default function Register() {
                   onChange={(e) => setPhone(e.target.value)}
                   required
                   placeholder={t("whatsapp")}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
+                  className="text-gray-700 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
                 />
               </div>
 
@@ -205,7 +382,7 @@ export default function Register() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder={t("password")}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors pr-10"
+                    className="text-gray-700 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors pr-10"
                   />
                   <button
                     type="button"
@@ -230,7 +407,7 @@ export default function Register() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder={t("confirm_password")}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors pr-10"
+                    className="text-gray-700 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors pr-10"
                   />
                   <button
                     type="button"
@@ -261,12 +438,35 @@ export default function Register() {
                   required
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors text-gray-700"
                 >
-                  <option value="">-- {t("bank_type")} --</option>
-                  {bankList.map((bank) => (
-                    <option key={bank.id_wallet} value={bank.id_wallet}>
-                      {bank.bank_name}
-                    </option>
-                  ))}
+                  <option value="">---- PILIH BANK -----</option>
+
+                  {/* GROUP BANK */}
+                  <optgroup label="Bank">
+                    {bankOptions
+                      .filter((bank) => bank.type_wallet === "1")
+                      .map((bank, index) => (
+                        <option
+                          key={`bank-${bank.id_wallet}-${bank.name}`}
+                          value={`${bank.id_wallet}-${bank.name}`}
+                        >
+                          {bank.name}
+                        </option>
+                      ))}
+                  </optgroup>
+
+                  {/* GROUP E-WALLET */}
+                  <optgroup label="E-Wallets">
+                    {bankOptions
+                      .filter((bank) => bank.type_wallet === "2")
+                      .map((bank, index) => (
+                        <option
+                          key={`ewallet-${bank.id_wallet}-${bank.name}`}
+                          value={`${bank.id_wallet}-${bank.name}`}
+                        >
+                          {bank.name}
+                        </option>
+                      ))}
+                  </optgroup>
                 </select>
               </div>
 
@@ -282,7 +482,7 @@ export default function Register() {
                   onChange={(e) => setAccountName(e.target.value)}
                   required
                   placeholder={t("bank_account_name")}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
+                  className="text-gray-700 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
                 />
               </div>
 
@@ -298,7 +498,7 @@ export default function Register() {
                   onChange={(e) => setAccountNumber(e.target.value)}
                   required
                   placeholder={t("account_number")}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
+                  className="text-gray-700 w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-pink-500 transition-colors"
                 />
               </div>
             </div>

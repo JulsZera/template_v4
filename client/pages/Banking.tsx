@@ -8,6 +8,10 @@ import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
 import { Braces, Copy } from "lucide-react";
 import { build } from "vite";
+import { fetchSeoPageAPI } from "@/services/seoService";
+import { useLocation } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import bgImage2 from "@/assets/e2279a7a26bd6ebfe974eab10510df738c19d7c01ce07a6a92bb3f9a1b828022.webp";
 
 type Tab = "deposit" | "withdraw" | "history";
 type PaymentMethod = "qris" | "bank_transfer" | "e_wallet" | "pulsa" | null;
@@ -52,6 +56,12 @@ interface BankingProps {
   pendingTransactions: any[];
 }
 
+declare global {
+  interface Window {
+    Tawk_API?: any;
+  }
+}
+
 const Banking = () => {
   const navigate = useNavigate();
   const { t } = useLanguage();
@@ -71,7 +81,6 @@ const Banking = () => {
   const [receiptFileName, setReceiptFileName] = useState("");
   const [withdrawalAmount, setWithdrawalAmount] = useState("");
   const [withdrawalBank, setWithdrawalBank] = useState("");
-  const [transactionType, setTransactionType] = useState("");
   const { user, updateBalance, setUser  } = useUser();
   const [adminWallets, setAdminWallets] = useState<AdminWallet[]>([]);
   const [userBanks, setUserBanks] = useState<UserWallet[]>([]);
@@ -80,7 +89,170 @@ const Banking = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const { pendingTransactions } = useUser();
   const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
+  const [transactionType, setTransactionType] = useState("all");
 
+  //============ SEO PAGE ================//
+
+  const location = useLocation();
+  const [seoData, setSeoData] = useState<any>(null);
+
+    useEffect(() => {
+      const loadSEO = async () => {
+        const seoData = await fetchSeoPageAPI(location.pathname);
+
+        console.log("RESPONSE SEO BANKING: ", seoData)
+
+        if (seoData) {
+          setSeoData(seoData);
+        }
+      };
+      loadSEO();
+    }, [location.pathname]);
+
+    useEffect(() => {
+      if (!seoData) return;
+
+    /* ================= TITLE ================= */
+
+      const title =
+        seoData.page_title ||
+        seoData.default_website_title ||
+        seoData.website_name ||
+        document.title;
+
+      document.title = title;
+
+      /* ================= META PIXEL ================= */
+
+      if (seoData.meta_pixel && !document.getElementById("seo-meta-pixel")) {
+        const wrapper = document.createElement("div");
+        wrapper.id = "seo-meta-pixel";
+        wrapper.innerHTML = seoData.meta_pixel;
+
+        document.head.appendChild(wrapper);
+      }
+
+    /* ================= META DESCRIPTION ================= */
+
+      const description =
+        seoData.meta_description ||
+        seoData.running_text ||
+        "";
+
+      if (description) {
+        let metaDesc = document.querySelector("meta[name='description']");
+
+        if (!metaDesc) {
+          metaDesc = document.createElement("meta");
+          metaDesc.setAttribute("name", "description");
+          document.head.appendChild(metaDesc);
+        }
+
+        metaDesc.setAttribute("content", description);
+      }
+
+
+    /* ================= META KEYWORDS ================= */
+
+      if (seoData.meta_keyboard) {
+        let metaKey = document.querySelector("meta[name='keywords']");
+
+        if (!metaKey) {
+          metaKey = document.createElement("meta");
+          metaKey.setAttribute("name", "keywords");
+          document.head.appendChild(metaKey);
+        }
+
+        metaKey.setAttribute("content", seoData.meta_keyboard);
+      }
+
+
+    /* ================= FAVICON ================= */
+
+      if (seoData.favicon) {
+        let favicon = document.querySelector("link[rel='icon']");
+
+        if (!favicon) {
+          favicon = document.createElement("link");
+          favicon.setAttribute("rel", "icon");
+          document.head.appendChild(favicon);
+        }
+
+        favicon.setAttribute("href", seoData.favicon);
+      }
+
+
+    /* ================= CANONICAL ================= */
+
+      if (seoData.custom_canonical_global) {
+        let canonical = document.querySelector("link[rel='canonical']");
+
+        if (!canonical) {
+          canonical = document.createElement("link");
+          canonical.setAttribute("rel", "canonical");
+          document.head.appendChild(canonical);
+        }
+
+        canonical.setAttribute("href", seoData.custom_canonical_global);
+      }
+
+    /* ================= LIVECHAT ================= */
+
+      if (seoData.script_livechat && !window.Tawk_API) {
+        const container = document.createElement("div");
+        container.innerHTML = seoData.script_livechat;
+
+        const scripts = container.querySelectorAll("script");
+
+        scripts.forEach((oldScript) => {
+          const newScript = document.createElement("script");
+
+          if (oldScript.src) {
+            newScript.src = oldScript.src;
+            newScript.async = true;
+          } else {
+            newScript.innerHTML = oldScript.innerHTML;
+          }
+
+          document.body.appendChild(newScript);
+        });
+      }
+
+
+    /* ================= CUSTOM HEAD SCRIPT ================= */
+
+      const headScript =
+        seoData.custom_script_page ||
+        seoData.custom_script_global ||
+        "";
+
+      if (headScript && !document.getElementById("seo-head-script")) {
+        const wrapper = document.createElement("div");
+        wrapper.id = "seo-head-script";
+        wrapper.innerHTML = headScript;
+
+        document.head.appendChild(wrapper);
+      }
+
+
+    /* ================= CUSTOM BODY SCRIPT ================= */
+
+      const bodyScript =
+        seoData.custom_script_body_page ||
+        seoData.custom_script_body_global ||
+        "";
+
+      if (bodyScript && !document.getElementById("seo-body-script")) {
+        const wrapper = document.createElement("div");
+        wrapper.id = "seo-body-script";
+        wrapper.innerHTML = bodyScript;
+
+        document.body.appendChild(wrapper);
+      }
+
+    }, [seoData]);
+
+//============ END SEO PAGE ================//
 
 useEffect(() => {
   if (!user?.username) return;
@@ -528,11 +700,27 @@ const handleWithdrawClick = async () => {
 
 //=========== History ============//
 
+const [historyData, setHistoryData] = useState<any[]>([]);
+
+const [currentPage, setCurrentPage] = useState(1);
+const itemsPerPage = 5;
+
+const today = new Date().toISOString().split("T")[0];
+
+const [startDate, setStartDate] = useState(today);
+const [endDate, setEndDate] = useState(today);
+
+const totalPages = Math.ceil(historyData.length / itemsPerPage);
+
+const paginatedData = historyData.slice(
+  (currentPage - 1) * itemsPerPage,
+  currentPage * itemsPerPage
+);
+
 useEffect(() => {
-  if (activeTab === "history") {
-    handleSearchHistory();
-  }
-}, [activeTab]);
+  if (activeTab === "history") return;
+  handleSearchHistory();
+}, [activeTab, transactionType, startDate, endDate]);
 
 const formatStartDate = (date: string) =>
   `${date} 00:00:00`;
@@ -561,39 +749,34 @@ const handleSearchHistory = async () => {
   }
 };
 
-const [historyData, setHistoryData] = useState<any[]>([]);
-
-const [currentPage, setCurrentPage] = useState(1);
-const itemsPerPage = 5;
-
-const today = new Date().toISOString().split("T")[0];
-
-const [startDate, setStartDate] = useState(today);
-const [endDate, setEndDate] = useState(today);
-
-const totalPages = Math.ceil(historyData.length / itemsPerPage);
-
-const paginatedData = historyData.slice(
-  (currentPage - 1) * itemsPerPage,
-  currentPage * itemsPerPage
-);
-
   return (
     <>
     <Toaster position="top-center" reverseOrder={false} />
-    <div className="min-h-screen" style={{ backgroundColor: COLORS.background.page }}>
+    <div className="w-screen min-h-screen pb-24 md:pb-0 relative overflow-x-hidden"
+      style={{
+        backgroundImage: `url(${bgImage2})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
+      }}
+      >
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white shadow-md">
+      <div className="sticky top-0 z-40 shadow-md" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
             onClick={handleBackClick}
-            className="text-5x1 font-bold text-gray-700 hover:text-gray-900 transition-colors leading-none"
+            className="text-5x1 font-bold text-white hover:text-gray-900 transition-colors leading-none"
           >
-            ←
+            <ArrowLeft size={24} />
           </button>
-          <h1 className="text-2xl font-bold text-center flex-1" style={{ color: COLORS.primary.main }}>
-            {t("banking")}
-          </h1>
+          {seoData?.logo && (
+            <img 
+            src={seoData.logo} 
+            alt="Logo"
+            onClick={() => navigate("/")}
+            className="h-16 w-auto flex-shrink-0" 
+            />
+          )}
           <div className="w-12"></div>
         </div>
       </div>
@@ -629,7 +812,7 @@ const paginatedData = historyData.slice(
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-1 mb-1 border-b-2" style={{ borderColor: COLORS.primary.light }}>
+        <div className="text-pink-500 flex gap-1 mb-1 border-b-2" style={{ borderColor: COLORS.primary.main }}>
           {["deposit", "withdraw", "history"].map((tab) => (
             <button
               key={tab}
@@ -637,7 +820,7 @@ const paginatedData = historyData.slice(
               className={`flex-1 px-3 py-2 font-bold text-sm transition-all duration-300 border-b-4 transform text-center ${
                 activeTab === tab
                   ? "text-white border-b-4 scale-105"
-                  : "text-gray-600 border-transparent hover:text-gray-900 scale-100"
+                  : "text-pink-600 border-transparent hover:text-gray-900 scale-100"
               }`}
               style={{
                 backgroundColor: activeTab === tab ? COLORS.primary.main : "transparent",
@@ -770,16 +953,16 @@ const paginatedData = historyData.slice(
                       <label className="block font-bold mb-1 text-xs" style={{ color: COLORS.primary.main }}>
                         {t("deposit_amount")} *
                       </label>
+                        <span className="font-bold text-gray-600 text-xs">{t("idr")}</span>
                       <div className="flex items-center gap-1">
                         <input
                           type="number"
                           value={depositAmount}
                           onChange={(e) => setDepositAmount(e.target.value)}
                           placeholder={t("enter_deposit_amount")}
-                          className="text-black flex-1 px-2 py-1 border-2 border-gray-300 rounded text-xs focus:outline-none"
+                          className="w-full text-black flex-1 px-2 py-1 border-2 border-gray-300 rounded text-xs focus:outline-none"
                           style={{ borderColor: COLORS.primary.light }}
                         />
-                        <span className="font-bold text-gray-600 text-xs">{t("idr")}</span>
                       </div>
                       <p className="text-xs text-gray-600 mt-1">
                         {t("minimum")} IDR {Number(selectedBankData?.min_depo ?? 0).toLocaleString()} |
@@ -827,7 +1010,7 @@ const paginatedData = historyData.slice(
                         value={depositAmount}
                         onChange={(e) => setDepositAmount(e.target.value)}
                         placeholder={t("enter_deposit_amount")}
-                        className="text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none w-0"
+                        className="w-full text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none"
                         style={{ borderColor: COLORS.primary.light }}
                       />
                     </div>
@@ -965,7 +1148,7 @@ const paginatedData = historyData.slice(
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder={t("enter_notes")}
-                      className="text-black w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none"
+                      className=" text-black w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none"
                       style={{ borderColor: COLORS.primary.light }}
                     />
                   </div>
@@ -1010,7 +1193,7 @@ const paginatedData = historyData.slice(
                         value={depositAmount}
                         onChange={(e) => setDepositAmount(e.target.value)}
                         placeholder={t("enter_deposit_amount")}
-                        className="text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none"
+                        className="w-full text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none"
                         style={{ borderColor: COLORS.primary.light }}
                       />
                       <span className="font-bold text-gray-600">{t("idr")}</span>
@@ -1190,7 +1373,7 @@ const paginatedData = historyData.slice(
                         value={depositAmount}
                         onChange={(e) => setDepositAmount(e.target.value)}
                         placeholder={t("enter_deposit_amount")}
-                        className="text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none"
+                        className="w-full text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none"
                         style={{ borderColor: COLORS.primary.light }}
                       />
                       <span className="font-bold text-gray-600">{t("idr")}</span>
@@ -1334,7 +1517,7 @@ const paginatedData = historyData.slice(
                         value={withdrawalAmount}
                         onChange={(e) => setWithdrawalAmount(e.target.value)}
                         placeholder="Masukkan jumlah penarikan"
-                        className="text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none w-0"
+                        className="w-full text-black flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none"
                         style={{ borderColor: COLORS.primary.light }}
                       />
                     </div>
@@ -1392,6 +1575,7 @@ const paginatedData = historyData.slice(
                     onClick={handleWithdrawClick}
                     disabled={withdrawLoading}
                     className="w-full py-2 rounded-lg font-bold text-black disabled:opacity-50"
+                    style={{ backgroundColor: "#f5d77a" }}
                   >
                     {withdrawLoading ? "Memproses..." : "Konfirmasi Withdraw"}
                   </button>
@@ -1631,6 +1815,14 @@ const paginatedData = historyData.slice(
                 )}
               </div>
           </div>
+        )}
+
+        {seoData?.custom_footer && (
+          <div
+            dangerouslySetInnerHTML={{
+              __html: seoData.custom_footer
+            }}
+          />
         )}
       </div>
 

@@ -174,6 +174,7 @@ export function uploadWithProgress(
 // ========================================
 // GENERIC API REQUEST
 // ========================================
+let sessionExpiredHandled = false;
 
 export async function apiRequest(
   endpoint: string,
@@ -209,46 +210,61 @@ export async function apiRequest(
         : null,
     });
 
-    // 🔥 HANDLE UNAUTHORIZED
-    if (response.status === 401) {
-      const existingJwt = localStorage.getItem("jwt");
-
-      if (existingJwt) {
-        localStorage.removeItem("jwt");
-        localStorage.removeItem("userData");
-        window.location.reload();
-      }
-
-      return {
-        status: false,
-        message: "Unauthorized",
-      };
-    }
-
-    // 🔥 selain 401, tetap baca body response
     const json = await response.json();
 
-    // 🔥 HANDLE SESSION INVALID DARI BACKEND
+    // HANDLE SESSION EXPIRED
     if (
-      json?.message === "missing session" ||
-      json?.message === "invalid session" ||
-      json?.rcode === "05"
+      json?.message === "Session expired" ||
+      json?.message === "Missing session"
     ) {
-      const existingJwt = localStorage.getItem("jwt");
+       if (!sessionExpiredHandled) {
+        sessionExpiredHandled = true;
 
-      if (existingJwt) {
         localStorage.removeItem("jwt");
         localStorage.removeItem("userData");
 
-        alert("Session telah berakhir, silakan login kembali");
-        window.location.href = "/";
+        window.dispatchEvent(new Event("session-expired"));
+        }
+        return {
+          status: false,
+          message: "Session expired",
+        };
       }
 
-      return {
-        status: false,
-        message: "Session expired",
-      };
-    }
+      if (response.status === 401) {
+        const existingJwt = localStorage.getItem("jwt");
+
+        if (existingJwt) {
+          localStorage.removeItem("jwt");
+          localStorage.removeItem("userData");
+          window.location.reload();
+        }
+
+        return {
+          status: false,
+          message: "Unauthorized",
+        };
+      }
+
+    // // return json;
+
+    // // 🔥 HANDLE SESSION INVALID DARI BACKEND
+    // window.dispatchEvent(new Event("session-expired")); {
+    //   const existingJwt = localStorage.getItem("jwt");
+
+    //   if (existingJwt) {
+    //     localStorage.removeItem("jwt");
+    //     localStorage.removeItem("userData");
+
+    //     alert("Session telah berakhir, silakan login kembali");
+    //     window.location.href = "/";
+    //   }
+
+    //   return {
+    //     status: false,
+    //     message: "Session expired",
+    //   };
+    // }
 
     // kalau status HTTP bukan 2xx,
     // tetap return body dari backend

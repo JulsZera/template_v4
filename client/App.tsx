@@ -1,5 +1,5 @@
 import "./global.css";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/context/UserContext";
 import { apiRequest } from "@/services/api";
 import { Toaster } from "react-hot-toast";
@@ -11,8 +11,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Register from "./pages/Register";
 import Promo from "./pages/Promo";
-import Deposit from "./pages/Deposit";
-import Withdraw from "./pages/Withdraw";
 import Banking from "./pages/Banking";
 import Profile from "./pages/Profile";
 
@@ -20,7 +18,8 @@ const queryClient = new QueryClient();
 const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
 
 function App() {
-const { setUser, setAuthLoading, authLoading } = useUser();
+  const { setUser, setAuthLoading, authLoading } = useUser();
+  const [showSessionExpired, setShowSessionExpired] = useState(false);
 
   useEffect(() => {
   const restoreSession = async () => {
@@ -121,9 +120,60 @@ useEffect(() => {
   }
 }, []);
 
+const IDLE_LIMIT = 30 * 60 * 1000; // 30 menit
+
+useEffect(() => {
+  let idleTimer: any;
+
+  const resetTimer = () => {
+    clearTimeout(idleTimer);
+
+    idleTimer = setTimeout(() => {
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("userData");
+
+      alert("Session expired karena tidak ada aktivitas");
+      window.location.href = "/";
+    }, IDLE_LIMIT);
+  };
+
+  const events = [
+    "mousemove",
+    "mousedown",
+    "keypress",
+    "scroll",
+    "touchstart"
+  ];
+
+  events.forEach(event =>
+    window.addEventListener(event, resetTimer)
+  );
+
+  resetTimer();
+
+  return () => {
+    events.forEach(event =>
+      window.removeEventListener(event, resetTimer)
+    );
+  };
+}, []);
+
+useEffect(() => {
+  const handleSessionExpired = () => {
+    setShowSessionExpired(true);
+  };
+
+  window.addEventListener("session-expired", handleSessionExpired);
+
+  return () => {
+    window.removeEventListener("session-expired", handleSessionExpired);
+  };
+}, []);
+
 if (authLoading) return null;
 
   return (
+    <>
     <LanguageProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
@@ -142,8 +192,6 @@ if (authLoading) return null;
               <Route path="/:category/:provider" element={<Index />} />
               <Route path="/register" element={<Register />} />
               <Route path="/promo" element={<Promo />} />
-              <Route path="/deposit" element={<Deposit />} />
-              <Route path="/withdraw" element={<Withdraw />} />
               <Route path="/banking" element={<Banking />} />
               <Route path="/profiles" element={<Profile />} />
               <Route path="*" element={<NotFound />} />
@@ -152,6 +200,34 @@ if (authLoading) return null;
         </TooltipProvider>
       </QueryClientProvider>
     </LanguageProvider>
+
+    {showSessionExpired && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+        <div className="bg-pink-50 p-6 rounded-xl text-center shadow-xl w-80">
+
+          <h2 className="text-black text-lg font-bold mb-3">
+            Session Expired
+          </h2>
+
+          <p className="text-black text-sm mb-4">
+            Silakan login kembali
+          </p>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem("jwt");
+              localStorage.removeItem("userData");
+              window.location.href = "/";
+            }}
+            className="bg-pink-500 text-white px-4 py-2 rounded-lg w-full"
+          >
+            Login Kembali
+          </button>
+
+        </div>
+      </div>
+    )}
+  </>
   );
 }
 
