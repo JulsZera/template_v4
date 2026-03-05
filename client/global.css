@@ -166,4 +166,26 @@
   .category-tab-inactive {
     @apply category-tab bg-gray-700 text-gray-300 hover:bg-gray-600;
   }
+
+  .maintenance-overlay {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(0,0,0,0.3),
+      rgba(0,0,0,0.3) 10px,
+      rgba(255,255,255,0.2) 10px,
+      rgba(255,255,255,0.2) 20px
+    );
+    animation: stripeMove 1s linear infinite;
+  }
+
+  @keyframes stripeMove {
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: 40px 40px;
+    }
+  }
 }

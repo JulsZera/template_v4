@@ -13,6 +13,7 @@ import Register from "./pages/Register";
 import Promo from "./pages/Promo";
 import Banking from "./pages/Banking";
 import Profile from "./pages/Profile";
+import toast from "react-hot-toast";
 
 const queryClient = new QueryClient();
 const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
@@ -115,7 +116,7 @@ useEffect(() => {
     localStorage.removeItem("jwt");
     localStorage.removeItem("userData");
 
-    alert("Session expired");
+    toast.error("Session expired");
     window.location.href = "/";
   }
 }, []);

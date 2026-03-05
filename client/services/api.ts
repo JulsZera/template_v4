@@ -343,9 +343,9 @@ export async function fetchPageData(): Promise<void> {
 
         id: index + 1,
         name: game.game_code || "Unknown",
-        provider: (game.id_mapping_provider || "").toLowerCase(),
+        provider: game.provider,
         image: game.image_src || "",
-        category: "mostplay",
+        category: game.category,
         game_id: game.game_id,
         game_code: game.game_code,
         id_mapping_provider: game.id_mapping_provider,
@@ -520,11 +520,13 @@ export async function fetchProviderAPI(
 
     return {
       id: provider.id_mapping_provider,
-      name: provider.provider_display || provider.provider_name,
+      name: provider.provider_name,
+      display: provider.provider_display,
       slug: slug,
       image: finalImage,
       flag: "🎮",
-      active: provider.active, // optional kalau mau pakai di UI
+      active: provider.active,
+      apiGameUrl: provider.api_game_url || null
     };
   });
 }

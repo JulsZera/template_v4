@@ -902,51 +902,53 @@ useEffect(() => {
   };
 
   const handleLaunchGame = async (game: any) => {
-  if (!user) {
-    toast.error("Silakan login dulu");
-    return;
-  }
-
-  try {
-    const payload = {
-      game_id: game.game_id,
-      game_code: game.game_code,
-      id_mapping_provider: game.id_mapping_provider,
-      provider_name: game.provider,
-      category: game.category,
-      type_game: "0",
-    };
-
-    const res = await launchGame(payload);
-
-    // console.log("RCODE :", res)
-
-    if (res?.status === true) {
-
-      const providerData = res.data;
-
-      // 🔥 CASE URL
-      if (providerData?.status === "URL" && typeof providerData.data === "string") {
-        window.open(providerData.data, "_blank");
-        return;
-      }
-
-      // 🔥 CASE HTML
-      if (providerData?.status === "HTML" && typeof providerData.data === "string") {
-        const newWindow = window.open("", "_blank");
-        newWindow?.document.write(providerData.data);
-        newWindow?.document.close();
-        return;
-      }
-
-    } else {
-      toast.error(res?.message || "Gagal membuka game");
+    if (!user) {
+      toast.error("Silakan login dulu");
+      return;
     }
 
-  } catch (err) {
-    toast.error("Terjadi kesalahan saat membuka game");
-  }
-};
+    console.log("GAME CLICK DATA :", game);
+
+    try {
+      const payload = {
+        game_id: game.game_id,
+        game_code: game.game_code,
+        id_mapping_provider: game.id_mapping_provider,
+        provider_name: game.provider,
+        category: game.category,
+        type_game: "0",
+      };
+
+      const res = await launchGame(payload);
+
+      // console.log("RCODE :", res)
+
+      if (res?.status === true) {
+
+        const providerData = res.data;
+
+        // 🔥 CASE URL
+        if (providerData?.status === "URL" && typeof providerData.data === "string") {
+          window.open(providerData.data, "_blank");
+          return;
+        }
+
+        // 🔥 CASE HTML
+        if (providerData?.status === "HTML" && typeof providerData.data === "string") {
+          const newWindow = window.open("", "_blank");
+          newWindow?.document.write(providerData.data);
+          newWindow?.document.close();
+          return;
+        }
+
+      } else {
+        toast.error(res?.message || "Gagal membuka game");
+      }
+
+    } catch (err) {
+      toast.error("Terjadi kesalahan saat membuka game");
+    }
+  };
 
 //=============== TURN OVER =============//
 const fetchTurnover = async () => {
@@ -1286,30 +1288,45 @@ useEffect(() => {
                 className="grid gap-2 responsive-game-grid"
                 style={{ gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))" }}
               >
-                {dynamicProviders.map((provider, idx) => (
-                  <div
-                    key={provider.id}
-                    onClick={() =>
-                      navigate(`/${activeCategory}/${provider.slug}`)
-                    }
-                    className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 group"
-                    style={{
-                      backgroundImage: `url(${provider.image})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      aspectRatio: "7/4",
-                      minWidth: "90px",
-                      maxWidth: "120px",
-                      animation: `blink-card 2s ease-in-out ${idx * 0.1}s infinite`,
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                      <button className="bg-cyan-300 text-black font-bold px-3 py-1 rounded-full text-xs">
-                        {provider.name}
-                      </button>
+                {dynamicProviders.map((provider, idx) => {
+
+                  const isComingSoon = provider.active === "0";
+                  const isMaintenance = provider.active === "2";
+                  const isDisabled = isComingSoon || isMaintenance;
+
+                  return (
+                    <div
+                      key={provider.id}
+                      onClick={() => {
+                        if (isDisabled) return;
+                        navigate(`/${activeCategory}/${provider.slug}`);
+                      }}
+                      className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 group relative"
+                      style={{
+                        backgroundImage: `url(${provider.image})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        aspectRatio: "7/4",
+                        minWidth: "90px",
+                        maxWidth: "120px",
+                        opacity: isComingSoon ? 0.7 : 1,
+                        animation: `blink-card 2s ease-in-out ${idx * 0.1}s infinite`,
+                      }}
+                    >
+
+                      {isMaintenance && (
+                        <div className="maintenance-overlay"></div>
+                      )}
+
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                        <button className="bg-cyan-300 text-black font-bold px-3 py-1 rounded-full text-xs">
+                          {provider.name}
+                        </button>
+                      </div>
+
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
             ) : (
@@ -1407,12 +1424,13 @@ useEffect(() => {
                   <div
                     key={index}
                     className="bg-pink-500 rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
+                    style={{ background: "linear-gradient(180deg, #F178A1 0%, #FFC1DA 100%)" }}
                   >
                     <img
                       src={bank.image}
                       alt={bank.name}
                       loading="lazy"
-                      className="max-h-7 object-contain grayscale hover:grayscale-0 transition-all duration-300"
+                      className="max-h-7 object-contain transition-all duration-300"
                     />
                   </div>
                 ))}
@@ -1437,12 +1455,13 @@ useEffect(() => {
                     <div
                       key={provider.id || index}
                       className="bg-pink-500 rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
+                      style={{ background: "linear-gradient(180deg, #F178A1 0%, #FFC1DA 100%)" }}
                     >
                       <img
                         src={provider.image}
                         alt={provider.name}
                         loading="lazy"
-                        className="max-h-8 object-contain grayscale hover:grayscale-0 transition-all duration-300"
+                        className="max-h-8 object-contain transition-all duration-300"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = "/placeholder.png";
                         }}
@@ -2671,30 +2690,45 @@ useEffect(() => {
                 className="grid gap-2 responsive-game-grid"
                 style={{ gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))" }}
               >
-                {dynamicProviders.map((provider, idx) => (
-                  <div
-                    key={provider.id}
-                    onClick={() =>
-                      navigate(`/${activeCategory}/${provider.slug}`)
-                    }
-                    className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 group"
-                    style={{
-                      backgroundImage: `url(${provider.image})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      aspectRatio: "7/4",
-                      minWidth: "90px",
-                      maxWidth: "120px",
-                      animation: `blink-card 2s ease-in-out ${idx * 0.1}s infinite`,
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                      <button className="bg-cyan-300 text-black font-bold px-3 py-1 rounded-full text-xs">
-                        {provider.name}
-                      </button>
+                {dynamicProviders.map((provider, idx) => {
+
+                  const isComingSoon = provider.active === "0";
+                  const isMaintenance = provider.active === "2";
+                  const isDisabled = isComingSoon || isMaintenance;
+
+                  return (
+                    <div
+                      key={provider.id}
+                      onClick={() => {
+                        if (isDisabled) return;
+                        navigate(`/${activeCategory}/${provider.slug}`);
+                      }}
+                      className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all cursor-pointer transform hover:scale-105 group relative"
+                      style={{
+                        backgroundImage: `url(${provider.image})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        aspectRatio: "7/4",
+                        minWidth: "90px",
+                        maxWidth: "120px",
+                        opacity: isComingSoon ? 0.7 : 1,
+                        animation: `blink-card 2s ease-in-out ${idx * 0.1}s infinite`,
+                      }}
+                    >
+
+                      {isMaintenance && (
+                        <div className="maintenance-overlay"></div>
+                      )}
+
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                        <button className="bg-cyan-300 text-black font-bold px-3 py-1 rounded-full text-xs">
+                          {provider.name}
+                        </button>
+                      </div>
+
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
             ) : (
@@ -2844,10 +2878,15 @@ useEffect(() => {
             CUSTOM FOOTER (FROM CMS)
           =============================== */}
           {customFooter && (
-             <div className="mt-10 w-full overflow-hidden">
-              <div
-                dangerouslySetInnerHTML={{ __html: customFooter }}
-              />
+            <div
+              className="rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
+              style={{ background: "linear-gradient(180deg, #F178A1 0%, #FFC1DA 100%)" }}
+            >
+              <div className="mt-10 w-full overflow-hidden">
+                <div
+                  dangerouslySetInnerHTML={{ __html: customFooter }}
+                />
+              </div>
             </div>
           )}
 
