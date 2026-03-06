@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"slot-backend/internal/cache"
@@ -11,56 +12,70 @@ import (
 	"slot-backend/internal/model"
 	"slot-backend/internal/service"
 	"slot-backend/pkg/response"
+
+	"golang.org/x/sync/singleflight"
 )
+
+var pagedataGroup singleflight.Group
+var refreshLock sync.Mutex
+
+var providerGroup singleflight.Group
+var gameListGroup singleflight.Group
 
 func GetPageDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	start := time.Now()
 
-	// cek cache
-	cached, fresh := cache.GetPageData()
+	v, _, _ := pagedataGroup.Do("pagedata", func() (interface{}, error) {
 
-	if cached != nil {
+		cached, fresh := cache.GetPageData()
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(cached)
+		if cached != nil {
 
-		log.Println("Pagedata served from cache in", time.Since(start))
+			// refresh background jika expired
+			if !fresh {
+				go refreshPageData()
+			}
 
-		// refresh background jika expired
-		if !fresh {
-			go refreshPageData()
+			return cached, nil
 		}
 
+		// first load
+		refreshPageData()
+
+		cached, _ = cache.GetPageData()
+
+		if cached != nil {
+			return cached, nil
+		}
+
+		return nil, nil
+	})
+
+	if v == nil {
+		http.Error(w, "Failed load pagedata", 500)
 		return
 	}
 
-	// first load
-	refreshPageData()
+	data := v.([]byte)
 
-	cached, _ = cache.GetPageData()
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 
-	if cached != nil {
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(cached)
-
-		log.Println("Pagedata served after refresh in", time.Since(start))
-
-		return
-	}
-
-	http.Error(w, "Failed load pagedata", 500)
+	log.Println("Pagedata served in", time.Since(start))
 }
 
 func refreshPageData() {
+
+	refreshLock.Lock()
+	defer refreshLock.Unlock()
 
 	log.Println("Refreshing pagedata from API...")
 
 	data, err := service.Post(
 		"/account/api/content/pagedata",
 		map[string]string{
-			"branch_id": "GGCULOX",
+			"branch_id": config.BRANCH_ID,
 		},
 		"",
 	)
@@ -68,38 +83,12 @@ func refreshPageData() {
 	if err != nil {
 
 		log.Println("Failed refresh pagedata:", err)
-
 		return
 	}
 
 	cache.SetPageData(data)
 
 	log.Println("Pagedata cache updated successfully")
-}
-
-func GetDataListGameHandler(w http.ResponseWriter, r *http.Request) {
-
-	var payload map[string]interface{}
-
-	err := json.NewDecoder(r.Body).Decode(&payload)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	result, err := service.Post(
-		"/account/api/content/getdata_listgame",
-		payload,
-		"",
-	)
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(result)
 }
 
 func GetDataProviderHandler(w http.ResponseWriter, r *http.Request) {
@@ -112,19 +101,134 @@ func GetDataProviderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := service.Post(
+	category := payload["category"].(string)
+
+	v, _, _ := providerGroup.Do(category, func() (interface{}, error) {
+
+		cached, fresh := cache.GetProviders(category)
+
+		if cached != nil {
+
+			if !fresh {
+				go refreshProvider(category, payload)
+			}
+
+			return cached, nil
+		}
+
+		refreshProvider(category, payload)
+
+		cached, _ = cache.GetProviders(category)
+
+		return cached, nil
+	})
+
+	if v == nil {
+		http.Error(w, "Failed load provider", 500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(v.([]byte))
+}
+
+func refreshProvider(category string, payload map[string]interface{}) {
+
+	log.Println("Refreshing provider:", category)
+
+	data, err := service.Post(
 		"/account/api/content/getdata_provider",
 		payload,
 		"",
 	)
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		log.Println("Failed refresh provider:", err)
+		return
+	}
+
+	cache.SetProviders(category, data)
+
+	log.Println("Provider cache updated:", category)
+}
+
+func GetDataListGameHandler(w http.ResponseWriter, r *http.Request) {
+
+	var payload map[string]interface{}
+
+	err := json.NewDecoder(r.Body).Decode(&payload)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	category := payload["category"].(string)
+	provider := payload["provider_name"].(string)
+	filter := payload["filter"].(string)
+
+	key := category + "_" + provider + "_" + filter
+
+	v, _, _ := gameListGroup.Do(key, func() (interface{}, error) {
+
+		cached, fresh := cache.GetGameList(key)
+
+		if cached != nil {
+
+			if !fresh {
+				go refreshGameList(key, payload)
+			}
+
+			return cached, nil
+		}
+
+		refreshGameList(key, payload)
+
+		cached, _ = cache.GetGameList(key)
+
+		return cached, nil
+	})
+
+	if v == nil {
+		http.Error(w, "Failed load gamelist", 500)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(result)
+	w.Write(v.([]byte))
+}
+
+func refreshGameList(key string, payload map[string]interface{}) {
+
+	log.Println("Refreshing gamelist:", key)
+
+	data, err := service.Post(
+		"/account/api/content/getdata_listgame",
+		payload,
+		"",
+	)
+
+	if err != nil {
+
+		log.Println("Failed refresh gamelist:", err)
+		return
+	}
+
+	cache.SetGameList(key, data)
+
+	log.Println("Gamelist cache updated:", key)
+}
+
+func GetCacheVersionHandler(w http.ResponseWriter, r *http.Request) {
+
+	resp := map[string]int64{
+		"pagedata": cache.GetPageDataVersion(),
+		"provider": cache.GetProvidersGlobalVersion(),
+		"gamelist": cache.GetGameListGlobalVersion(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
 
 func GetSeoPageHandler(w http.ResponseWriter, r *http.Request) {

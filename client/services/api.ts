@@ -246,28 +246,6 @@ export async function apiRequest(
         };
       }
 
-    // // return json;
-
-    // // 🔥 HANDLE SESSION INVALID DARI BACKEND
-    // window.dispatchEvent(new Event("session-expired")); {
-    //   const existingJwt = localStorage.getItem("jwt");
-
-    //   if (existingJwt) {
-    //     localStorage.removeItem("jwt");
-    //     localStorage.removeItem("userData");
-
-    //     alert("Session telah berakhir, silakan login kembali");
-    //     window.location.href = "/";
-    //   }
-
-    //   return {
-    //     status: false,
-    //     message: "Session expired",
-    //   };
-    // }
-
-    // kalau status HTTP bukan 2xx,
-    // tetap return body dari backend
     if (!response.ok) {
       return json;
     }
@@ -302,9 +280,9 @@ export async function getProfile() {
 // LOAD PAGEDATA WITH GLOBAL CACHE
 // ========================================
 
-export async function fetchPageData(): Promise<void> {
+export async function fetchPageData(force = false): Promise<void> {
 
-  if (pagedataLoaded) return;
+  if (pagedataLoaded && !force) return;
 
   if (pagedataLoadingPromise) {
     return pagedataLoadingPromise;
@@ -314,29 +292,14 @@ export async function fetchPageData(): Promise<void> {
 
     console.log("Loading pagedata from API...");
 
-    const result = await apiRequest("/pagedata", "POST", {
-      branch_id: BRANCH_ID,
-    });
-
-    console.log("FULL PAGEDATA RESPONSE:", result);
-
-    // FIX: gunakan rcode, bukan status
-    if (!result || result.rcode !== "00") {
-
-      console.error("Failed load pagedata");
-
-      return;
-
-    }
-
-    // FIX: data sekarang langsung di root, bukan result.data
-    const data = result;
-
     // ========================================
     // MOSTPLAY
     // ========================================
 
-    const mostPlayRaw = data.data_mostplay || [];
+    const getmostpalycache = await apiRequest("/pagedata/mostplay","POST");
+    
+    const mostPlayRaw = getmostpalycache || [];
+    console.log("GET MOSTPLAY :", mostPlayRaw)
 
     realMostPlay = mostPlayRaw.map(
       (game: any, index: number) => ({
@@ -359,7 +322,9 @@ export async function fetchPageData(): Promise<void> {
     // CATEGORIES
     // ========================================
 
-    realCategories = data.data_category || [];
+    const getRealCategories = await apiRequest("/pagedata/category","POST");
+
+    realCategories = getRealCategories || [];
 
     console.log("Categories raw:", realCategories);
 
@@ -367,7 +332,9 @@ export async function fetchPageData(): Promise<void> {
     // BANNERS
     // ========================================
 
-    realBanners = data.data_banner || [];
+    const getBanners = await apiRequest("/pagedata/banner","POST");
+
+    realBanners = getBanners || [];
 
     console.log("Banners:", realBanners);
 
@@ -375,7 +342,9 @@ export async function fetchPageData(): Promise<void> {
     // BANK STATUS
     // ========================================
 
-    realBankStatus = data.data_bankstatus || [];
+    const getBankStatus = await apiRequest("/pagedata/bank","POST");
+
+    realBankStatus = getBankStatus || [];
 
     console.log("Bank status:", realBankStatus);
 
@@ -383,7 +352,9 @@ export async function fetchPageData(): Promise<void> {
     // SEO
     // ========================================
 
-    realSEO = data.data_seo?.[0] || null;
+    const getRealSEO = await apiRequest("/pagedata/seo","POST");
+
+    realSEO = getRealSEO?.[0] || null;
 
     console.log("SEO:", realSEO);
 
@@ -391,7 +362,9 @@ export async function fetchPageData(): Promise<void> {
     // POPUP
     // ========================================
 
-    realPopup = data.data_popup?.[0] || null;
+    const getRealPopup = await apiRequest("/pagedata/popup","POST");
+
+    realPopup = getRealPopup?.[0] || null;
 
     console.log("Popup:", realPopup);
 
@@ -399,7 +372,9 @@ export async function fetchPageData(): Promise<void> {
     // PROVIDERS
     // ========================================
 
-    const providersRaw = data.data_provider || [];
+    const getProvider = await apiRequest("/pagedata/provider","POST");
+
+    const providersRaw = getProvider || [];
     realProviders = {};
 
     providersRaw.forEach((provider: any) => {
@@ -430,29 +405,6 @@ export async function fetchPageData(): Promise<void> {
 
     console.log("Providers built:", realProviders);
 
-    // ========================================
-    // GAMES
-    // ========================================
-
-    const gamesRaw = data.data_mostplay || [];
-
-    realGames = gamesRaw.map(
-      (game: any, index: number) => ({
-        id: index + 1,
-        name: game.game_code || "Unknown Game",
-        provider: (game.id_mapping_provider || "").toLowerCase(),
-        image: game.image_src || "",
-        category:(game.category || "slots").toLowerCase(),
-        game_id: game.game_id,
-        game_code: game.game_code,
-        id_mapping_provider: game.id_mapping_provider,
-        url: game.url,
-        isProvider: false,
-
-      })
-    );
-
-    console.log("Games built:", realGames);
     pagedataLoaded = true;
     console.log("Pagedata loaded successfully");
   })();
@@ -700,51 +652,98 @@ export function getCategories() {
   ];
 }
 
+// export async function fetchGameList(
+//   categorySlug: string,
+//   providerSlug: string,
+//   filter: string = "all"
+// ): Promise<Game[]> {
+
+//   if (!providerSlug || providerSlug === "") {
+//     return [];
+//   }
+
+//   const providerId = providerSlugToId[providerSlug];
+//   const providerName = providerSlug;
+
+//   if (!providerId) {
+//     console.error("Provider ID not found:", providerSlug);
+//     return [];
+//   }
+
+//   const cacheKey = `${categorySlug}_${providerId}_${filter}`;
+
+//   // ✅ HANYA pakai cache kalau ada isi
+//   if (
+//     gameListCache[cacheKey] &&
+//     gameListCache[cacheKey].length > 0
+//   ) {
+//     console.log("Game list from cache:", cacheKey);
+//     return gameListCache[cacheKey];
+//   }
+
+//   console.log("Fetching game list:", cacheKey);
+
+//   const result = await apiRequest(
+//     "/gamelist",
+//     "POST",
+//     {
+//       branch_id: BRANCH_ID,
+//       category: normalizeCategoryAPI(categorySlug),
+//       filter: filter,
+//       id_mapping_provider: providerId,
+//       provider_name: providerName,
+//     }
+//   );
+
+//   if (!result || result.rcode !== "00") {
+//     console.error("Failed load game list", result);
+//     return [];
+//   }
+
+//   const gamesRaw = Array.isArray(result.data)
+//     ? result.data
+//     : [];
+
+//   console.log("GamesRaw length:", gamesRaw.length);
+
+//   const games = gamesRaw.map((game: any) => ({
+//     id: `${providerSlug}_${game.id}`,
+//     name: game.name,
+//     provider: game.provider,
+//     image: game.image,
+//     category: game.category,
+
+//     game_id: game.game_id,
+//     game_code: game.game_code,
+//     id_mapping_provider: game.id_mapping_provider,
+//     url: game.url,
+//   }));
+  
+//   console.log("Game raw sample:", gamesRaw[0]);
+
+//   // ✅ hanya cache kalau ada data
+//   gameListCache[cacheKey] = games;
+
+//   return games;
+// }
+
 export async function fetchGameList(
   categorySlug: string,
   providerSlug: string,
   filter: string = "all"
 ): Promise<Game[]> {
 
-  if (!providerSlug || providerSlug === "") {
-    return [];
-  }
-
   const providerId = providerSlugToId[providerSlug];
-  const providerName = providerSlug;
 
-  if (!providerId) {
-    console.error("Provider ID not found:", providerSlug);
-    return [];
-  }
-
-  const cacheKey = `${categorySlug}_${providerId}_${filter}`;
-
-  // ✅ HANYA pakai cache kalau ada isi
-  if (
-    gameListCache[cacheKey] &&
-    gameListCache[cacheKey].length > 0
-  ) {
-    console.log("Game list from cache:", cacheKey);
-    return gameListCache[cacheKey];
-  }
-
-  console.log("Fetching game list:", cacheKey);
-
-  const result = await apiRequest(
-    "/gamelist",
-    "POST",
-    {
-      branch_id: BRANCH_ID,
-      category: normalizeCategoryAPI(categorySlug),
-      filter: filter,
-      id_mapping_provider: providerId,
-      provider_name: providerName,
-    }
-  );
+  const result = await apiRequest("/gamelist", "POST", {
+    branch_id: BRANCH_ID,
+    category: normalizeCategoryAPI(categorySlug),
+    filter,
+    id_mapping_provider: providerId,
+    provider_name: providerSlug,
+  });
 
   if (!result || result.rcode !== "00") {
-    console.error("Failed load game list", result);
     return [];
   }
 
@@ -752,27 +751,17 @@ export async function fetchGameList(
     ? result.data
     : [];
 
-  console.log("GamesRaw length:", gamesRaw.length);
-
-  const games = gamesRaw.map((game: any) => ({
-  id: `${providerSlug}_${game.id}`,
-  name: game.name,
-  provider: game.provider,
-  image: game.image,
-  category: game.category,
-
-  game_id: game.game_id,
-  game_code: game.game_code,
-  id_mapping_provider: game.id_mapping_provider,
-  url: game.url,
-}));
-  
-  console.log("Game raw sample:", gamesRaw[0]);
-
-  // ✅ hanya cache kalau ada data
-  gameListCache[cacheKey] = games;
-
-  return games;
+  return gamesRaw.map((game: any) => ({
+    id: `${providerSlug}_${game.id}`,
+    name: game.name,
+    provider: game.provider,
+    image: game.image,
+    category: game.category,
+    game_id: game.game_id,
+    game_code: game.game_code,
+    id_mapping_provider: game.id_mapping_provider,
+    url: game.url,
+  }));
 }
 
 // ========================================
@@ -813,3 +802,4 @@ export async function launchGame(data: {
 }) {
   return await apiRequest("/launchgame", "POST", data);
 }
+

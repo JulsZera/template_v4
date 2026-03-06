@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 
+	"slot-backend/internal/config"
 	"slot-backend/internal/service"
 )
 
@@ -11,26 +12,28 @@ func StartCacheWarmer() {
 
 	go func() {
 
-		for {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
 
-			time.Sleep(30 * time.Second)
+		for range ticker.C {
 
 			data, err := service.Post(
 				"/account/api/content/pagedata",
 				map[string]string{
-					"branch_id": "GGCULOX",
+					"branch_id": config.BRANCH_ID,
 				},
 				"",
 			)
 
-			if err == nil {
+			if err != nil {
 
-				SetPageData(data)
-
-				log.Println("Cache warmed")
-
+				log.Println("Cache warmer error:", err)
+				continue
 			}
 
+			SetPageData(data)
+
+			log.Println("Cache warmed successfully")
 		}
 
 	}()

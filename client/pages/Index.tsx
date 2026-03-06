@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 import { useUser } from "@/context/UserContext";
 import { COLORS } from "@/config/colors";
 import bgImage from "@/assets/48dc4f2dde91b5b233141fd752d6c50d471e32a7c556558002c6f4b6eb74a053.webp";
+import { fetchProviders } from "@/services/providers";
 
 
 export default function Index() {
@@ -675,11 +676,12 @@ const closePopup = async () => {
 
   // Fetch providers based on active category
   useEffect(() => {
-    const fetchProviders = async () => {
+    const fetchProvider = async () => {
       setLoadingProviders(true);
       try {
         // const providers = await fetchProvidersByCategory(activeCategory);
-        const providers = await fetchProviderAPI(activeCategory);
+        // const providers = await fetchProviderAPI(activeCategory);
+        const providers = await fetchProviders(activeCategory);
         setDynamicProviders(providers);
       } catch (error) {
         console.error("Error fetching providers:", error);
@@ -687,7 +689,7 @@ const closePopup = async () => {
         setLoadingProviders(false);
       }
     };
-    fetchProviders();
+    fetchProvider();
   }, [activeCategory]);
 
   const [showPassword, setShowPassword] = useState(false);
