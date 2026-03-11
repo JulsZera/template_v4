@@ -12,6 +12,7 @@ import { fetchSeoPageAPI } from "@/services/seoService";
 import { useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import bgImage2 from "@/assets/e2279a7a26bd6ebfe974eab10510df738c19d7c01ce07a6a92bb3f9a1b828022.webp";
+import logo from "@/assets/logo.webp";
 
 type Tab = "deposit" | "withdraw" | "history";
 type PaymentMethod = "qris" | "bank_transfer" | "e_wallet" | "pulsa" | null;
@@ -739,22 +740,29 @@ const handleSearchHistory = async () => {
       >
       {/* Header */}
       <div className="sticky top-0 z-40 shadow-md" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}>
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
           <button
             onClick={handleBackClick}
             className="text-5x1 font-bold text-white hover:text-gray-900 transition-colors leading-none"
           >
-            <ArrowLeft size={24} />
+            <ArrowLeft size={35} />
           </button>
-          {seoData?.logo && (
+          {/* {seoData?.logo && (
             <img 
             src={seoData.logo} 
             alt="Logo"
             onClick={() => navigate("/")}
             className="h-16 w-auto flex-shrink-0" 
             />
-          )}
-          <div className="w-12"></div>
+          )} */}
+
+          <img 
+              src={logo} 
+              alt="Logo"
+              onClick={() => navigate("/")}
+              className="h-10 w-auto flex-shrink-0" 
+            />
+          <div className="w-auto"></div>
         </div>
       </div>
 

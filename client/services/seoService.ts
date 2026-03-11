@@ -6,7 +6,6 @@ export const fetchSeoPageAPI = async (pageUrl: string) => {
   const domainName = window.location.hostname;
 
   const res = await apiRequest("/seo-page", "POST", {
-    branch_id: BRANCH_ID,
     page_url: pageUrl,
     domain_name: domainName,
   });

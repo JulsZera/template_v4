@@ -10,6 +10,7 @@ import { useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import bgImage2 from "@/assets/e2279a7a26bd6ebfe974eab10510df738c19d7c01ce07a6a92bb3f9a1b828022.webp";
 import toast from "react-hot-toast";
+import logo from "@/assets/logo.webp";
 
 type Tab = "profile" | "security" | "banking" | "referral" | "statistics";
 
@@ -1302,19 +1303,26 @@ const Profile = () => {
       }}
       >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 md:px-8 py-6 bg-pink-300 border-b-2" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)", borderColor: COLORS.primary.main }}>
+      <div className="flex items-center justify-between px-4 md:px-8 py-2 bg-pink-300 border-b-2" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)", borderColor: COLORS.primary.main }}>
         <button onClick={handleBackClick} className="text-white text-5xl font-bold">
-          <ArrowLeft size={24} />
+          <ArrowLeft size={35} />
         </button>
-        {seoData?.logo && (
+        {/* {seoData?.logo && (
             <img 
             src={seoData.logo} 
             alt="Logo"
             onClick={() => navigate("/")}
             className="h-16 w-auto flex-shrink-0" 
             />
-          )}
-        <div className="w-12"></div>
+          )} */}
+
+          <img 
+            src={logo} 
+            alt="Logo"
+            onClick={() => navigate("/")}
+            className="h-10 w-auto flex-shrink-0" 
+          />
+        <div className="w-auto"></div>
       </div>
 
       {/* User Info Board */}

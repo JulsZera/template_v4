@@ -8,6 +8,7 @@ import { apiRequest } from "@/services/api";
 import { fetchSeoPageAPI } from "@/services/seoService";
 import { useLocation } from "react-router-dom";
 import bgImage2 from "@/assets/e2279a7a26bd6ebfe974eab10510df738c19d7c01ce07a6a92bb3f9a1b828022.webp";
+import logo from "@/assets/logo.webp";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -287,23 +288,29 @@ export default function Register() {
     >
       {/* Header */}
       <header className="sticky top-0 z-40 shadow-lg" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}>
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-2">
           <button
             onClick={() => navigate("/")}
             className="text-white p-2 hover:bg-white/20 rounded transition-all"
           >
-            <ArrowLeft size={24} />
+            <ArrowLeft size={35} />
           </button>
           {/* Logo instead of text title */}
-          {seoData?.logo && (
+          {/* {seoData?.logo && (
             <img 
             src={seoData.logo} 
             alt="Logo"
             onClick={() => navigate("/")}
             className="h-16 w-auto flex-shrink-0" 
             />
-          )}
-          <div className="w-10"></div>
+          )} */}
+          <img 
+            src={logo} 
+            alt="Logo"
+            onClick={() => navigate("/")}
+            className="h-10 w-auto flex-shrink-0" 
+          />
+          <div className="w-auto"></div>
         </div>
       </header>
 

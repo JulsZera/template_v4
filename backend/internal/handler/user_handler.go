@@ -208,28 +208,18 @@ func GetHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 func ListBankPublicHandler(w http.ResponseWriter, r *http.Request) {
 
-	var req struct {
-		BranchID string `json:"branch_id"`
-	}
-
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		response.Send(w, 400, "Invalid request", nil)
-		return
-	}
-
-	if req.BranchID == "" {
+	if config.BRANCH_ID == "" {
 		response.Send(w, 400, "Branch ID required", nil)
 		return
 	}
 
 	log.Println("=== LIST BANK PUBLIC ===")
-	log.Println("branch_id:", req.BranchID)
+	log.Println("branch_id:", config.BRANCH_ID)
 
 	resp, err := service.Post(
 		"/account/api/content/listbank",
 		map[string]string{
-			"branch_id": req.BranchID,
+			"branch_id": config.BRANCH_ID,
 		},
 		"", // 🔥 TANPA TOKEN
 	)
