@@ -1163,21 +1163,21 @@ useEffect(() => {
               src={logo} 
               alt="Logo"
               onClick={() => navigate("/")}
-              className="h-12 w-auto flex-shrink-0" 
+              className="h-10 w-auto flex-shrink-0" 
             />
 
             {/* Right - Sign In/Register for mobile */}
             <div className="flex gap-2 flex-shrink-0">
               <button
                 onClick={() => setShowSignInModal(true)}
-                className="text-white font-bold px-5 py-4 rounded-full text-xs transition-all hover:shadow-lg auth-button-enter auth-button-glow"
+                className="text-white font-bold px-4 py-3 rounded-full text-sm transition-all hover:shadow-lg auth-button-enter auth-button-glow"
                 style={{ background: "#F178A1" }}
               >
                 {t("sign_in")}
               </button>
               <button
                 onClick={() => navigate("/register")}
-                className="text-white font-bold px-5 py-4 rounded-full text-xs transition-all hover:shadow-lg auth-button-enter auth-button-glow"
+                className="text-white font-bold px-4 py-3 rounded-full text-sm transition-all hover:shadow-lg auth-button-enter auth-button-glow"
                 style={{ background: "#F178A1" }}
               >
                 {t("sign_up")}
@@ -1351,7 +1351,7 @@ useEffect(() => {
 
         {/* Main Content - 2 Column Layout */}
         <div className="flex gap-3 overflow-x-hidden" style={{ padding: "0.25rem" }}>
-          <div className="flex flex-col gap-2 category-button" style={{ width: "58px" }}>
+          <div className="flex flex-col gap-2 category-button" style={{ width: "65px" }}>
             {categories.map((cat) => (
               <button
                 key={cat.id}
@@ -1366,14 +1366,14 @@ useEffect(() => {
                 }}
               >
                 {cat.emoji ? (
-                  <div style={{ fontSize: "16px", animation: activeCategory === cat.id ? 'spin-icon 2s linear infinite' : 'bounce-icon 2s ease-in-out infinite' }}>{cat.emoji}</div>
+                  <div style={{ fontSize: "20px", animation: activeCategory === cat.id ? 'spin-icon 2s linear infinite' : 'bounce-icon 2s ease-in-out infinite' }}>{cat.emoji}</div>
                 ) : (
                   <img
                     src={cat.image}
                     alt={cat.label}
                     style={{
-                      width: "32px",
-                      height: "32px",
+                      width: "34px",
+                      height: "34px",
                       objectFit: "contain",
                       animation: activeCategory === cat.id ? 'spin-icon 2s linear infinite' : 'bounce-icon 2s ease-in-out infinite'
                     }}
@@ -2530,7 +2530,7 @@ useEffect(() => {
                 src={logo} 
                 alt="Logo"
                 onClick={() => navigate("/")}
-                className="h-7 w-auto flex-shrink-0" 
+                className="h-6 w-auto flex-shrink-0" 
               />
 
           {/* Username and Balance (center) */}
@@ -2538,17 +2538,17 @@ useEffect(() => {
             <button
               onClick={() => navigate("/profiles")}
             > 
-              <span className="text-white font-bold text-xs">
+              <p className="text-white font-semibold text-xs">
                 {user?.username ?? "-"}
-              </span><br></br>
-              <span className="text-white font-bold text-xs">{user ? user.idr_balance : "-"}</span>
+              </p>
+              <p className="text-white font-semibold text-xs">{user ? user.idr_balance : "-"}</p>
             </button>
           </div>
 
           {/* Deposit Button (with animation) */}
           <button
             onClick={() => navigate("/banking")}
-            className="text-white font-bold px-6 py-3 rounded-full text-xm transition-all deposit-button hover:shadow-lg flex-shrink-0"
+            className="text-white font-semibold px-5 py-2 rounded-full text-xm transition-all deposit-button hover:shadow-lg flex-shrink-0"
             style={{ background: "#00D4FF" }}
           >
             {t("deposit")}
@@ -2762,7 +2762,7 @@ useEffect(() => {
 
       {/* Main Content - 2 Column Layout */}
       <div className="flex gap-3 overflow-x-hidden mb-8" style={{ padding: "0.25rem" }}>
-        <div className="flex flex-col gap-2 category-button" style={{ width: "58px" }}>
+        <div className="flex flex-col gap-2 category-button" style={{ width: "65px" }}>
           {categories.map((cat) => (
             <button
               key={cat.id}
@@ -2777,14 +2777,14 @@ useEffect(() => {
               }}
             >
               {cat.emoji ? (
-                <div style={{ fontSize: "16px", animation: activeCategory === cat.id ? 'spin-icon 2s linear infinite' : 'bounce-icon 2s ease-in-out infinite' }}>{cat.emoji}</div>
+                <div style={{ fontSize: "20px", animation: activeCategory === cat.id ? 'spin-icon 2s linear infinite' : 'bounce-icon 2s ease-in-out infinite' }}>{cat.emoji}</div>
               ) : (
                 <img
                   src={cat.image}
                   alt={cat.label}
                   style={{
-                    width: "32px",
-                    height: "32px",
+                    width: "34px",
+                    height: "34px",
                     objectFit: "contain",
                     animation: activeCategory === cat.id ? 'spin-icon 2s linear infinite' : 'bounce-icon 2s ease-in-out infinite'
                   }}
@@ -3203,6 +3203,12 @@ useEffect(() => {
               <button onClick={() => setShowMenu(false)} className="hover:bg-white/20 p-2 rounded">
                 <X size={24} />
               </button>
+              <img 
+                src={logo} 
+                alt="Logo"
+                onClick={() => navigate("/")}
+                className="h-10 w-auto" 
+              />
             </div>
 
             {/* User Info */}
