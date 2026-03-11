@@ -88,7 +88,6 @@ const Banking = () => {
   const [loadingPromo, setLoadingPromo] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { pendingTransactions } = useUser();
-  const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
   const [transactionType, setTransactionType] = useState("all");
 
   //============ SEO PAGE ================//
@@ -287,8 +286,6 @@ useEffect(() => {
 
   const loadBanking = async () => {
     const res = await apiRequest("/check-wallet-user", "POST", {
-      branch_id: BRANCH_ID,
-      username: user.username,
       transaction_type: "3",
       id_tier: user.id_tier,
       type_wallet: user.type_wallet
@@ -457,13 +454,10 @@ useEffect(() => {
     setLoadingPromo(true);
 
     const res = await apiRequest("/get-promotion-user", "POST", {
-      branch_id: BRANCH_ID,
-      username: user?.username,
       type_promo: "4",
       type_wallet: user.type_wallet
     });
 
-    // console.log("BRANCH ID:",BRANCH_ID)
     // console.log("Username :",user?.username)
     // console.log("TW :",user.type_wallet)
 
@@ -534,7 +528,7 @@ const handleDepositClick = async () => {
 
     const formData = new FormData();
 
-    formData.append("branch_id", BRANCH_ID);
+    // formData.append("branch_id", BRANCH_ID);
     formData.append("username", user.username);
     formData.append("gameplayid", user.gameplayid);
     formData.append("gameplaynum", user.gameplaynum);
@@ -661,22 +655,7 @@ const handleWithdrawClick = async () => {
 
     const walletString = `${selectedBankData.id_wallet};${selectedBankData.account_name};${selectedBankData.bank_name};${selectedBankData.account_number};${selectedBankData.type_wallet}`;
 
-    // console.log("=== WITHDRAW BODY ===");
-    // console.log({
-    //   branch_id: BRANCH_ID,
-    //   username: user.username,
-    //   gameplayid: user.gameplayid,
-    //   gameplaynum: user.gameplaynum,
-    //   wallet_user: walletString,
-    //   amount: amountNumber,
-    //   description: ""
-    // });
-
     const res = await apiRequest("/withdraw", "POST", {
-      branch_id: BRANCH_ID,
-      username: user.username,
-      gameplayid: user.gameplayid,
-      gameplaynum: user.gameplaynum,
       wallet_user: walletString,
       amount: String(amountNumber),
       description: ""
@@ -732,8 +711,6 @@ const handleSearchHistory = async () => {
   if (!user) return;
 
   const res = await apiRequest("/history", "POST", {
-    branch_id: BRANCH_ID,
-    username: user.username,
     start_date: formatStartDate(startDate),
     end_date: formatEndDate(endDate),
     type: transactionType // all / deposit / withdraw

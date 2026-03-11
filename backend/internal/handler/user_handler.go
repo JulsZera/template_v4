@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"slot-backend/internal/config"
 	"slot-backend/internal/middleware"
 	"slot-backend/internal/model"
 	"slot-backend/internal/service"
@@ -35,7 +36,7 @@ func GetProfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req := model.ProfileRequest{
-		BranchID:    claims.BranchID,
+		BranchID:    config.BRANCH_ID,
 		Username:    claims.Username,
 		GameplayID:  claims.GameplayID,
 		GameplayNum: claims.GameplayNum,
@@ -66,7 +67,7 @@ func GetBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	token := claims.Token
 
 	req := model.BalanceRequest{
-		BranchID:    claims.BranchID,
+		BranchID:    config.BRANCH_ID,
 		Username:    claims.Username,
 		GameplayID:  claims.GameplayID,
 		GameplayNum: claims.GameplayNum,
@@ -165,13 +166,7 @@ func GetHistoryHandler(w http.ResponseWriter, r *http.Request) {
 
 	token := claims.Token
 
-	var req struct {
-		BranchID  string `json:"branch_id"`
-		Username  string `json:"username"`
-		StartDate string `json:"start_date"`
-		EndDate   string `json:"end_date"`
-		Type      string `json:"type"`
-	}
+	var req model.HistoryRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -179,9 +174,17 @@ func GetHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	payload := map[string]interface{}{
+		"branch_id":  config.BRANCH_ID,
+		"username":   claims.Username,
+		"start_date": req.StartDate,
+		"end_date":   req.EndDate,
+		"type":       req.Type,
+	}
+
 	resp, err := service.Post(
 		"/account/api/data/history_transaction",
-		req,
+		payload,
 		token,
 	)
 	if err != nil {
@@ -260,7 +263,7 @@ func ChangePasswordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	req := map[string]interface{}{
-		"branch_id":   claims.BranchID,
+		"branch_id":   config.BRANCH_ID,
 		"username":    claims.Username,
 		"oldpassword": body.OldPassword,
 		"password":    body.Password,
@@ -302,22 +305,28 @@ func CheckRequestRefferalHandler(w http.ResponseWriter, r *http.Request) {
 
 	token := claims.Token
 
-	var req struct {
-		BranchID    string `json:"branch_id"`
-		Username    string `json:"username"`
-		Gameplayid  string `json:"gameplayid"`
-		Gameplaynum string `json:"gameplaynum"`
+	payload := map[string]interface{}{
+		"branch_id":   config.BRANCH_ID,
+		"username":    claims.Username,
+		"gameplayid":  claims.GameplayID,
+		"gameplaynum": claims.GameplayNum,
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&payload)
 	if err != nil {
 		response.Send(w, 400, "Invalid request", nil)
 		return
 	}
 
+	if config.BRANCH_ID == "" || claims.Username == "" ||
+		claims.GameplayID == "" || claims.GameplayNum == "" {
+		response.Send(w, 400, "Missing required fields", nil)
+		return
+	}
+
 	resp, err := service.Post(
 		"/account/api/manage/check_request_refferal",
-		req,
+		payload,
 		token,
 	)
 
@@ -350,27 +359,30 @@ func TurnoverHandler(w http.ResponseWriter, r *http.Request) {
 
 	token := claims.Token
 
-	var req struct {
-		BranchID    string `json:"branch_id"`
-		Username    string `json:"username"`
-		Gameplayid  string `json:"gameplayid"`
-		Gameplaynum string `json:"gameplaynum"`
-		Category    string `json:"category"`
-		Provider    string `json:"provider"`
-		StartDate   string `json:"start_date"`
-		EndDate     string `json:"end_date"`
-	}
+	var req model.TurnoverRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		response.Send(w, 400, "Invalid request", nil)
 		return
 	}
+
+	payload := map[string]interface{}{
+		"branch_id":   config.BRANCH_ID,
+		"username":    claims.Username,
+		"gameplayid":  claims.GameplayID,
+		"gameplaynum": claims.GameplayNum,
+		"category":    req.Category,
+		"provider":    req.Provider,
+		"start_date":  req.StartDate,
+		"end_date":    req.EndDate,
+	}
+
 	log.Println("=== TURNOVER REQUEST ===")
-	log.Println("branch_id:", req.BranchID)
-	log.Println("username:", req.Username)
-	log.Println("gameplayid:", req.Gameplayid)
-	log.Println("gameplaynum:", req.Gameplaynum)
+	log.Println("branch_id:", config.BRANCH_ID)
+	log.Println("username:", claims.Username)
+	log.Println("gameplayid:", claims.GameplayID)
+	log.Println("gameplaynum:", claims.GameplayNum)
 	log.Println("category:", req.Category)
 	log.Println("provider:", req.Provider)
 	log.Println("startdate:", req.StartDate)
@@ -378,7 +390,7 @@ func TurnoverHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := service.Post(
 		"/account/api/data/turnover",
-		req,
+		payload,
 		token,
 	)
 
@@ -398,7 +410,7 @@ func TurnoverHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.Send(w, 200, "Success", result)
+	response.Send(w, 200, message, result)
 }
 
 func RequestReferralHandler(w http.ResponseWriter, r *http.Request) {

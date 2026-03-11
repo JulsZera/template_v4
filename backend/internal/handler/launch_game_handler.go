@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"slot-backend/internal/config"
+	"slot-backend/internal/guard"
 	"slot-backend/internal/middleware"
 	"slot-backend/internal/model"
 	"slot-backend/internal/service"
@@ -72,6 +73,17 @@ func LaunchGameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	launchKey := claims.Username + "_" + req.ProviderName
+
+	if !guard.AllowLaunch(launchKey) {
+
+		log.Println("Launch blocked (duplicate):", launchKey)
+
+		response.Send(w, 429, "Please wait before launching again", nil)
+		return
+
+	}
+
 	var endpoint string
 
 	if req.ProviderName == "pgsoft" {
@@ -84,6 +96,111 @@ func LaunchGameHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := service.Post(
 		endpoint,
+		payload,
+		token,
+	)
+
+	if err != nil {
+		response.Send(w, 500, err.Error(), nil)
+		return
+	}
+
+	var result map[string]interface{}
+	json.Unmarshal(resp, &result)
+
+	rcode, _ := result["rcode"].(string)
+	message, _ := result["message"].(string)
+
+	log.Println("RCODE :", rcode)
+	log.Println("MESSAGE :", message)
+
+	if rcode != "00" {
+		response.Send(w, 400, message, result)
+		return
+	}
+
+	response.Send(w, 200, message, result)
+}
+
+func LaunchProviderHandler(w http.ResponseWriter, r *http.Request) {
+
+	claims := r.Context().Value(middleware.UserContextKey).(*service.JWTClaims)
+	token := claims.Token
+
+	var req model.LaunchProviderRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		response.Send(w, 400, "Invalid request body", nil)
+		return
+	}
+
+	if req.ApiGameURL == "" {
+		response.Send(w, 400, "Missing apigame_url", nil)
+		return
+	}
+
+	var gameId string = ""
+	var gameCode string = ""
+
+	payload := map[string]interface{}{
+		"branch_id":           config.BRANCH_ID,
+		"realname":            claims.Name,
+		"name":                claims.NameUnique,
+		"email":               claims.Email,
+		"phonenumber":         claims.Phonenumber,
+		"username":            claims.Username,
+		"gameplayid":          claims.GameplayID,
+		"gameplaynum":         claims.GameplayNum,
+		"game_id":             gameId,
+		"game_code":           gameCode,
+		"id_mapping_provider": req.IDMappingProvider,
+		"provider_name":       req.ProviderName,
+		"category":            req.Category,
+		"type_game":           req.TypeGame,
+		"client_ip":           claims.ClientIP,
+		"lobbyurl":            config.DOMAIN,
+		"casierurl":           config.DOMAIN_BANKING,
+	}
+
+	log.Println("PROVIDER DIRECT LAUNCH")
+	log.Println("API URL :", req.ApiGameURL)
+	log.Println("BRANCH ID :", config.BRANCH_ID)
+	log.Println("NAME :", claims.Name)
+	log.Println("NAME UNIQUE :", claims.NameUnique)
+	log.Println("EMAIL :", claims.Email)
+	log.Println("PHONE :", claims.Phonenumber)
+	log.Println("USERNAME :", claims.Username)
+	log.Println("GAMEPLAYID :", claims.GameplayID)
+	log.Println("GAMEPLAYNUM :", claims.GameplayNum)
+	log.Println("GAMEID :", gameId)
+	log.Println("GAMECODE :", gameCode)
+	log.Println("IDMP :", req.IDMappingProvider)
+	log.Println("PROVIDER NAME :", req.ProviderName)
+	log.Println("CATEGORY :", req.Category)
+	log.Println("TYPE GAME :", req.TypeGame)
+	log.Println("CLIENT IP :", claims.ClientIP)
+	log.Println("DOMAIN :", config.DOMAIN)
+	log.Println("DOMAIN BANK :", config.DOMAIN_BANKING)
+
+	if config.BRANCH_ID == "" || claims.Username == "" {
+		response.Send(w, 400, "Missing required fields", nil)
+		return
+	}
+
+	launchKey := claims.Username + "_" + req.ProviderName
+
+	if !guard.AllowLaunch(launchKey) {
+
+		log.Println("Launch blocked (duplicate):", launchKey)
+
+		response.Send(w, 429, "Please wait before launching again", nil)
+		return
+
+	}
+
+	resp, err := service.Post(
+		req.ApiGameURL,
 		payload,
 		token,
 	)

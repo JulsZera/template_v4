@@ -1,7 +1,7 @@
 import { apiRequest, normalizeCategoryAPI } from "@/services/api";
 const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
 
-export interface ProviderData {
+export interface ProviderDatas {
   id: string;
   name: string;
   display: string;
@@ -20,7 +20,7 @@ function slugifyProviderName(name: string) {
 
 export async function fetchProviders(
   categorySlug: string
-): Promise<ProviderData[]> {
+): Promise<ProviderDatas[]> {
 
   const result = await apiRequest("/provider", "POST", {
     branch_id: BRANCH_ID,
@@ -42,15 +42,13 @@ export async function fetchProviders(
 
         let finalImage = provider.image_url;
 
-        if (provider.active === "0") {
+        if (provider.active === "3") {
             finalImage = provider.image_comingsoon;
         }
 
         if (provider.active === "2") {
             finalImage = provider.image_maintenance;
         }
-
-        const hasDirectLaunch = !!provider.api_game_url;
 
         return {
             id: provider.id_mapping_provider,
@@ -60,8 +58,8 @@ export async function fetchProviders(
             image: finalImage,
             flag: "🎮",
             active: provider.active,
-            apiGameUrl: provider.api_game_url || null,
-            hasDirectLaunch
+            apiGameUrl: provider.apigame_url || null,
+            hasDirectLaunch: provider.apigame_url !== ""
         };
     });
 }

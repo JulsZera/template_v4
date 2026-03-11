@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"slot-backend/internal/config"
 	"slot-backend/internal/middleware"
 	"slot-backend/internal/model"
 	"slot-backend/internal/service"
@@ -28,7 +29,7 @@ func DepositHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ambil field text
-	branchID := r.FormValue("branch_id")
+	branchID := config.BRANCH_ID
 	username := r.FormValue("username")
 	gameplayid := r.FormValue("gameplayid")
 	gameplaynum := r.FormValue("gameplaynum")
@@ -136,15 +137,7 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 
 	token := claims.Token
 
-	var req struct {
-		BranchID    string `json:"branch_id"`
-		Username    string `json:"username"`
-		Gameplayid  string `json:"gameplayid"`
-		Gameplaynum string `json:"gameplaynum"`
-		Wallet      string `json:"wallet_user"`
-		Amount      string `json:"amount"`
-		Description string `json:"description"`
-	}
+	var req model.WithdrawRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -152,26 +145,36 @@ func WithdrawHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	payload := map[string]interface{}{
+		"branch_id":   config.BRANCH_ID,
+		"username":    claims.Username,
+		"gameplayid":  claims.GameplayID,
+		"gameplaynum": claims.GameplayNum,
+		"wallet_user": req.WalletUser,
+		"amount":      req.Amount,
+		"description": req.Description,
+	}
+
 	log.Println("=== WD REQUEST RECEIVED ===")
-	log.Println("branch_id:", req.BranchID)
-	log.Println("username:", req.Username)
-	log.Println("gameplayid:", req.Gameplayid)
-	log.Println("gameplaynum:", req.Gameplaynum)
-	log.Println("wallet_user:", req.Wallet)
+	log.Println("branch_id:", config.BRANCH_ID)
+	log.Println("username:", claims.Username)
+	log.Println("gameplayid:", claims.GameplayID)
+	log.Println("gameplaynum:", claims.GameplayNum)
+	log.Println("wallet_user:", req.WalletUser)
 	log.Println("amount:", req.Amount)
 	log.Println("Desc:", req.Description)
 
 	// 🔥 Validasi
-	if req.BranchID == "" || req.Username == "" ||
-		req.Gameplayid == "" || req.Gameplaynum == "" ||
-		req.Wallet == "" || req.Amount == "" {
+	if config.BRANCH_ID == "" || claims.Username == "" ||
+		claims.GameplayID == "" || claims.GameplayNum == "" ||
+		req.WalletUser == "" || req.Amount == "" {
 		response.Send(w, 400, "Missing required fields", nil)
 		return
 	}
 
 	resp, err := service.Post(
 		"/account/api/transaction/withdraw",
-		req,
+		payload,
 		token,
 	)
 
@@ -211,9 +214,30 @@ func AddBankHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	payload := map[string]interface{}{
+		"branch_id":      config.BRANCH_ID,
+		"username":       claims.Username,
+		"gameplayid":     claims.GameplayID,
+		"gameplaynum":    claims.GameplayNum,
+		"email":          claims.Email,
+		"type_wallet":    req.TypeWallet,
+		"id_wallet":      req.IDWallet,
+		"account_name":   req.AccountName,
+		"account_number": req.AccountNumber,
+	}
+
+	// 🔥 Validasi
+	if config.BRANCH_ID == "" || claims.Username == "" ||
+		claims.GameplayID == "" || claims.GameplayNum == "" ||
+		req.TypeWallet == "" || req.IDWallet == "" ||
+		req.AccountName == "" || req.AccountNumber == "" {
+		response.Send(w, 400, "Missing required fields", nil)
+		return
+	}
+
 	resp, err := service.Post(
 		"/account/api/manage/add_accountbank",
-		req,
+		payload,
 		token,
 	)
 
@@ -222,11 +246,18 @@ func AddBankHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var result interface{}
-
+	var result map[string]interface{}
 	json.Unmarshal(resp, &result)
 
-	response.Send(w, 200, "Add bank success", result)
+	rcode, _ := result["rcode"].(string)
+	message, _ := result["message"].(string)
+
+	if rcode != "00" {
+		response.Send(w, 400, message, result)
+		return
+	}
+
+	response.Send(w, 200, message, result)
 }
 
 func ReferralHandler(w http.ResponseWriter, r *http.Request) {
@@ -234,16 +265,31 @@ func ReferralHandler(w http.ResponseWriter, r *http.Request) {
 	claims := r.Context().Value(middleware.UserContextKey).(*service.JWTClaims)
 	token := claims.Token
 	var req model.ReferralRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
 
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		response.Send(w, 400, "Invalid request", nil)
 		return
 	}
 
+	payload := map[string]interface{}{
+		"branch_id":      config.BRANCH_ID,
+		"username":       claims.Username,
+		"gameplayid":     claims.GameplayID,
+		"gameplaynum":    claims.GameplayNum,
+		"name":           claims.Name,
+		"email":          req.Email,
+		"address":        req.Address,
+		"phonenumber":    claims.Phonenumber,
+		"id_wallet":      req.IDWallet,
+		"type_wallet":    req.TypeWallet,
+		"account_name":   req.AccountName,
+		"account_number": req.AccountNumber,
+	}
+
 	resp, err := service.Post(
 		"/account/api/manage/request_refferal",
-		req,
+		payload,
 		token,
 	)
 
@@ -252,11 +298,18 @@ func ReferralHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var result interface{}
-
+	var result map[string]interface{}
 	json.Unmarshal(resp, &result)
 
-	response.Send(w, 200, "Referral success", result)
+	rcode, _ := result["rcode"].(string)
+	message, _ := result["message"].(string)
+
+	if rcode != "00" {
+		response.Send(w, 400, message, result)
+		return
+	}
+
+	response.Send(w, 200, message, result)
 }
 
 func UpdatePopupTransactionHandler(w http.ResponseWriter, r *http.Request) {
@@ -264,16 +317,7 @@ func UpdatePopupTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	claims := r.Context().Value(middleware.UserContextKey).(*service.JWTClaims)
 	token := claims.Token
 
-	var req struct {
-		BranchID        string `json:"branch_id"`
-		Username        string `json:"username"`
-		GameplayID      string `json:"gameplayid"`
-		GameplayNum     string `json:"gameplaynum"`
-		Txid            string `json:"txid"`
-		TransactionType string `json:"transaction_type"`
-		FlagPopup       string `json:"flag_popup"`
-	}
-
+	var req model.UpdatePopupRequest
 	log.Println(req)
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -282,9 +326,19 @@ func UpdatePopupTransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	payload := map[string]interface{}{
+		"branch_id":        config.BRANCH_ID,
+		"username":         claims.Username,
+		"gameplayid":       claims.GameplayID,
+		"gameplaynum":      claims.GameplayNum,
+		"txid":             req.TxID,
+		"transaction_type": req.TransactionType,
+		"flag_popup":       req.FlagPopup,
+	}
+
 	resp, err := service.Post(
 		"/account/api/manage/updatepopup_transaction",
-		req,
+		payload,
 		token,
 	)
 
@@ -293,10 +347,16 @@ func UpdatePopupTransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var result interface{}
+	var result map[string]interface{}
 	json.Unmarshal(resp, &result)
 
-	log.Println(resp)
+	rcode, _ := result["rcode"].(string)
+	message, _ := result["message"].(string)
 
-	response.Send(w, 200, "Popup updated", result)
+	if rcode != "00" {
+		response.Send(w, 400, message, result)
+		return
+	}
+
+	response.Send(w, 200, message, result)
 }

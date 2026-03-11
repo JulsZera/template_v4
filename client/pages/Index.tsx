@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useLanguage, Language } from "@/context/LanguageContext";
-import { fetchAllProviders, fetchProvidersByCategory, ProviderData, fetchProviderAPI, Game, getBalance, launchGame } from "@/services/api";
+import { fetchAllProviders, fetchProvidersByCategory, ProviderData, Game, getBalance } from "@/services/api";
 import { Wallet, Home, Zap, TrendingUp, Gift, Menu, X, Eye, EyeOff, LogOut, Search, Settings, Globe } from "lucide-react";
 import { fetchPageData } from "@/services/api";
 import { apiRequest } from "@/services/api";
@@ -12,11 +12,17 @@ import { getBanners } from "@/services/api";
 import { getBankStatus } from "@/services/api";
 import { getSEO } from "@/services/api";
 import { getPopup } from "@/services/api";
+import { getCanonical } from "@/services/api";
 import toast from "react-hot-toast";
 import { useUser } from "@/context/UserContext";
 import { COLORS } from "@/config/colors";
 import bgImage from "@/assets/48dc4f2dde91b5b233141fd752d6c50d471e32a7c556558002c6f4b6eb74a053.webp";
-import { fetchProviders } from "@/services/providers";
+import logo from "@/assets/logo.webp";
+import { fetchProviders, ProviderDatas } from "@/services/providers";
+import { launchGame, launchProvider } from "@/services/launchgame";
+import { resolveSEO } from "@/utils/seoResolver";
+import { applySEO } from "@/utils/seoManager";
+import { applyRouteSEO } from "@/utils/seoRouter";
 
 
 export default function Index() {
@@ -36,6 +42,7 @@ export default function Index() {
   const [selectedProvider, setSelectedProvider] = useState<string | undefined>();
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [dynamicProviders, setDynamicProviders] = useState<ProviderData[]>([]);
+  const [dynamicProviderss, setDynamicProviderss] = useState<ProviderDatas[]>([]);
   const [dynamicGames, setDynamicGames] = useState<Game[]>([]);
   const [loadingProviders, setLoadingProviders] = useState(false);
   const [loadingGames, setLoadingGames] = useState(false);
@@ -54,7 +61,6 @@ export default function Index() {
   const [showPendingPopup, setShowPendingPopup] = useState(false);
   const [animatePopup, setAnimatePopup] = useState(false);
   const [currentPopupData, setCurrentPopupData] = useState<any>(null);
-  const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const [allProviders, setAllProviders] = useState<ProviderData[]>([]);
   const [turnover, setTurnover ] = useState({totaltrx: 0, totalto: ""});
@@ -69,175 +75,215 @@ export default function Index() {
 
 //================   S  E  O   ==================//
 
- useEffect(() => {
-      if (!seoData) return;
+//  useEffect(() => {
+//       if (!seoData) return;
 
-    /* ================= TITLE ================= */
+//     /* ================= TITLE ================= */
 
-      const title =
-        seoData.page_title ||
-        seoData.default_website_title ||
-        seoData.website_name ||
-        document.title;
+//       const title =
+//         seoData.page_title ||
+//         seoData.default_website_title ||
+//         seoData.website_name ||
+//         document.title;
 
-      document.title = title;
+//       document.title = title;
 
-      /* ================= META PIXEL ================= */
+//       /* ================= META PIXEL ================= */
 
-      if (seoData.meta_pixel && !document.getElementById("seo-meta-pixel")) {
-        const wrapper = document.createElement("div");
-        wrapper.id = "seo-meta-pixel";
-        wrapper.innerHTML = seoData.meta_pixel;
+//       if (seoData.meta_pixel && !document.getElementById("seo-meta-pixel")) {
+//         const wrapper = document.createElement("div");
+//         wrapper.id = "seo-meta-pixel";
+//         wrapper.innerHTML = seoData.meta_pixel;
 
-        document.head.appendChild(wrapper);
-      }
+//         document.head.appendChild(wrapper);
+//       }
 
-    /* ================= META DESCRIPTION ================= */
+//     /* ================= META DESCRIPTION ================= */
 
-      const description =
-        seoData.meta_description ||
-        seoData.running_text ||
-        "";
+//       const description =
+//         seoData.meta_description ||
+//         seoData.running_text ||
+//         "";
 
-      if (description) {
-        let metaDesc = document.querySelector("meta[name='description']");
+//       if (description) {
+//         let metaDesc = document.querySelector("meta[name='description']");
 
-        if (!metaDesc) {
-          metaDesc = document.createElement("meta");
-          metaDesc.setAttribute("name", "description");
-          document.head.appendChild(metaDesc);
-        }
+//         if (!metaDesc) {
+//           metaDesc = document.createElement("meta");
+//           metaDesc.setAttribute("name", "description");
+//           document.head.appendChild(metaDesc);
+//         }
 
-        metaDesc.setAttribute("content", description);
-      }
-
-
-    /* ================= META KEYWORDS ================= */
-
-      if (seoData.meta_keyboard) {
-        let metaKey = document.querySelector("meta[name='keywords']");
-
-        if (!metaKey) {
-          metaKey = document.createElement("meta");
-          metaKey.setAttribute("name", "keywords");
-          document.head.appendChild(metaKey);
-        }
-
-        metaKey.setAttribute("content", seoData.meta_keyboard);
-      }
+//         metaDesc.setAttribute("content", description);
+//       }
 
 
-    /* ================= FAVICON ================= */
+//     /* ================= META KEYWORDS ================= */
 
-      if (seoData.favicon) {
-        let favicon = document.querySelector("link[rel='icon']");
+//       if (seoData.meta_keyboard) {
+//         let metaKey = document.querySelector("meta[name='keywords']");
 
-        if (!favicon) {
-          favicon = document.createElement("link");
-          favicon.setAttribute("rel", "icon");
-          document.head.appendChild(favicon);
-        }
+//         if (!metaKey) {
+//           metaKey = document.createElement("meta");
+//           metaKey.setAttribute("name", "keywords");
+//           document.head.appendChild(metaKey);
+//         }
 
-        favicon.setAttribute("href", seoData.favicon);
-      }
-
-
-    /* ================= CANONICAL ================= */
-
-      if (seoData.custom_canonical_global) {
-        let canonical = document.querySelector("link[rel='canonical']");
-
-        if (!canonical) {
-          canonical = document.createElement("link");
-          canonical.setAttribute("rel", "canonical");
-          document.head.appendChild(canonical);
-        }
-
-        canonical.setAttribute("href", seoData.custom_canonical_global);
-      }
-
-    /* ================= LIVECHAT ================= */
-
-      if (seoData.script_livechat && !window.Tawk_API) {
-        const container = document.createElement("div");
-        container.innerHTML = seoData.script_livechat;
-
-        const scripts = container.querySelectorAll("script");
-
-        scripts.forEach((oldScript) => {
-          const newScript = document.createElement("script");
-
-          if (oldScript.src) {
-            newScript.src = oldScript.src;
-            newScript.async = true;
-          } else {
-            newScript.innerHTML = oldScript.innerHTML;
-          }
-
-          document.body.appendChild(newScript);
-        });
-      }
+//         metaKey.setAttribute("content", seoData.meta_keyboard);
+//       }
 
 
-    /* ================= CUSTOM HEAD SCRIPT ================= */
+//     /* ================= FAVICON ================= */
 
-      const headScript =
-        seoData.custom_script_page ||
-        seoData.custom_script_global ||
-        "";
+//       if (seoData.favicon) {
+//         let favicon = document.querySelector("link[rel='icon']");
 
-      if (headScript && !document.getElementById("seo-head-script")) {
-        const wrapper = document.createElement("div");
-        wrapper.id = "seo-head-script";
-        wrapper.innerHTML = headScript;
+//         if (!favicon) {
+//           favicon = document.createElement("link");
+//           favicon.setAttribute("rel", "icon");
+//           document.head.appendChild(favicon);
+//         }
 
-        document.head.appendChild(wrapper);
-      }
+//         favicon.setAttribute("href", seoData.favicon);
+//       }
 
 
-    /* ================= CUSTOM BODY SCRIPT ================= */
+//     /* ================= CANONICAL ================= */
 
-      const bodyScript =
-        seoData.custom_script_body_page ||
-        seoData.custom_script_body_global ||
-        "";
+//       if (seoData.custom_canonical_global) {
+//         let canonical = document.querySelector("link[rel='canonical']");
 
-      if (bodyScript && !document.getElementById("seo-body-script")) {
-        const wrapper = document.createElement("div");
-        wrapper.id = "seo-body-script";
-        wrapper.innerHTML = bodyScript;
+//         if (!canonical) {
+//           canonical = document.createElement("link");
+//           canonical.setAttribute("rel", "canonical");
+//           document.head.appendChild(canonical);
+//         }
 
-        document.body.appendChild(wrapper);
-      }
+//         canonical.setAttribute("href", seoData.custom_canonical_global);
+//       }
 
-    }, [seoData]);
+//     /* ================= LIVECHAT ================= */
 
-//============ END SEO PAGE ================//
+//       if (seoData.script_livechat && !window.Tawk_API) {
+//         const container = document.createElement("div");
+//         container.innerHTML = seoData.script_livechat;
 
-useEffect(() => {
-  if (!seoData) return;
+//         const scripts = container.querySelectorAll("script");
 
-  if (seoData.flag_custom_footer === "1" && seoData.custom_footer) {
-    setCustomFooter(seoData.custom_footer);
-  }
+//         scripts.forEach((oldScript) => {
+//           const newScript = document.createElement("script");
 
-}, [seoData]);
+//           if (oldScript.src) {
+//             newScript.src = oldScript.src;
+//             newScript.async = true;
+//           } else {
+//             newScript.innerHTML = oldScript.innerHTML;
+//           }
 
-//====================END SEO====================//
+//           document.body.appendChild(newScript);
+//         });
+//       }
+
+
+//     /* ================= CUSTOM HEAD SCRIPT ================= */
+
+//       const headScript =
+//         seoData.custom_script_page ||
+//         seoData.custom_script_global ||
+//         "";
+
+//       if (headScript && !document.getElementById("seo-head-script")) {
+//         const wrapper = document.createElement("div");
+//         wrapper.id = "seo-head-script";
+//         wrapper.innerHTML = headScript;
+
+//         document.head.appendChild(wrapper);
+//       }
+
+
+//     /* ================= CUSTOM BODY SCRIPT ================= */
+
+//       const bodyScript =
+//         seoData.custom_script_body_page ||
+//         seoData.custom_script_body_global ||
+//         "";
+
+//       if (bodyScript && !document.getElementById("seo-body-script")) {
+//         const wrapper = document.createElement("div");
+//         wrapper.id = "seo-body-script";
+//         wrapper.innerHTML = bodyScript;
+
+//         document.body.appendChild(wrapper);
+//       }
+
+//     }, [seoData]);
+
+// useEffect(() => {
+//   if (!seoData) return;
+
+//   if (seoData.flag_custom_footer === "1" && seoData.custom_footer) {
+//     setCustomFooter(seoData.custom_footer);
+//   }
+
+// }, [seoData]);
+
+// const SEO_POPUP_KEY = "seo_popup_shown";
+
+// useEffect(() => {
+//   const init = async () => {
+//     await fetchPageData();
+
+//     const seo = getSEO();
+//     const popupData = getPopup();
+//     const bannerRaw = getBanners();
+
+//     setCategories(getCategories());
+//     setBankStatus(getBankStatus());
+//     setSeoData(seo);
+//     setPopup(popupData);
+
+//     const formatted = bannerRaw.map((b: any, index: number) => ({
+//       id: b.id || index + 1,
+//       image: b.url_mobile || b.url || "",
+//     }));
+
+//     setBanners(formatted);
+//     setDynamicGames(getMostPlay());
+
+//     const popupShown = localStorage.getItem("seo_popup_shown");
+
+//     if (user && popupData && popupData.status === "1" && !popupShown) {
+//       setShowPopup(true);
+//       localStorage.setItem("seo_popup_shown", "1");
+//     }
+//     // 🔥 TAMBAHKAN INI
+//     const providers = await fetchAllProviders();
+//       setAllProviders(providers);
+//     };
+
+//   init();
+// }, []);
 
 const SEO_POPUP_KEY = "seo_popup_shown";
 
 useEffect(() => {
+
   const init = async () => {
+
     await fetchPageData();
 
-    const seo = getSEO();
+    const seoRaw = getSEO();
+    const canonicalRaw = getCanonical();
+
+    const finalSEO = resolveSEO(seoRaw, canonicalRaw);
+
+    setSeoData(finalSEO);
+
     const popupData = getPopup();
     const bannerRaw = getBanners();
 
     setCategories(getCategories());
     setBankStatus(getBankStatus());
-    setSeoData(seo);
     setPopup(popupData);
 
     const formatted = bannerRaw.map((b: any, index: number) => ({
@@ -254,13 +300,47 @@ useEffect(() => {
       setShowPopup(true);
       localStorage.setItem("seo_popup_shown", "1");
     }
-    // 🔥 TAMBAHKAN INI
+
+    console.log("SEO RAW:", seoRaw);
+    console.log("CANONICAL RAW:", canonicalRaw);
+    console.log("FINAL SEO:", finalSEO);
+
     const providers = await fetchAllProviders();
-      setAllProviders(providers);
-    };
+    setAllProviders(providers);
+
+  };
 
   init();
+
 }, []);
+
+useEffect(() => {
+
+  if (!seoData) return;
+
+  applySEO(seoData);
+
+}, [seoData]);
+
+useEffect(() => {
+
+  if (!seoData) return;
+
+  if (seoData.flag_custom_footer === "1" && seoData.custom_footer) {
+    setCustomFooter(seoData.custom_footer);
+  }
+
+}, [seoData]);
+
+useEffect(() => {
+
+  if (!seoData) return;
+
+  applyRouteSEO(location.pathname, seoData);
+
+}, [location.pathname, seoData]);
+
+//====================END SEO====================//
 
 useEffect(() => {
   if (activeCategory === "gamehit") {
@@ -319,33 +399,100 @@ useEffect(() => {
 
 useEffect(() => {
 
-  if (!selectedProvider || selectedProvider === "") {
-    if (activeCategory !== "gamehit") {
-      setDynamicGames([]);
+  const processProvider = async () => {
+
+    if (!selectedProvider || selectedProvider === "") {
+      if (activeCategory !== "gamehit") {
+        setDynamicGames([]);
+      }
+      return;
     }
-    return;
-  }
-  const loadGames = async () => {
+
+    const provider = dynamicProviders.find(
+      p => p.slug === selectedProvider
+    );
+
+    console.log("PROVIDERS :", provider);
+
+    if (!provider) return;
+
+    // 🔥 PROVIDER DIRECT LAUNCH
+    if (provider.apiGameUrl && provider.apiGameUrl !== "") {
+
+      console.log("API GAME URL :", provider.apiGameUrl);
+
+      try {
+
+        if (!user) {
+          toast.error("Silakan login dulu");
+          navigate(-1)
+          return;
+        }
+
+        setLoadingGames(true);
+
+        const cleanUrl = provider.apiGameUrl.replace(
+          /^https?:\/\/[^/]+/,
+          ""
+        );
+
+        const result = await launchProvider({
+          apigame_url: cleanUrl,
+          game_id: "",
+          game_code: "",
+          category: activeCategory,
+          provider_name: provider.slug,
+          id_mapping_provider: provider.id,
+          type_game: "1"
+        });
+
+        console.log("RESULT PROVIDERS :", result)
+
+        if (result?.data?.rcode === "00") {
+          window.open(result.data.data, "_blank");
+        }
+
+      } catch (err) {
+
+        console.error("Provider launch error", err);
+
+      } finally {
+
+        navigate(-1)
+        setLoadingGames(false);
+
+      }
+
+      return;
+    }
 
     try {
+
       setLoadingGames(true);
-      // console.log("CALL FETCH:", activeCategory, selectedProvider);
+
       const games = await fetchGameList(
         activeCategory,
         selectedProvider,
         filterType
       );
+
       setDynamicGames(games);
+
     } catch (err) {
+
       console.error("Load game error:", err);
+
     } finally {
+
       setLoadingGames(false);
+
     }
+
   };
 
-  loadGames();
+  processProvider();
 
-}, [activeCategory, selectedProvider, filterType]);
+}, [activeCategory, selectedProvider, filterType, dynamicProviders]);
 
 //============== LOGIN Include Profile and Get Balance ==============//
 
@@ -400,10 +547,8 @@ const handleSignIn = async (e: React.FormEvent) => {
 
   try {
     const res = await apiRequest("/login", "POST", {
-      branch_id: BRANCH_ID,
       username: loginPhone,
       password: loginPassword,
-      client_ip: "127.0.0.1",
     });
 
     if (res.status) {
@@ -495,7 +640,7 @@ useEffect(() => {
   const initCheck = async () => {
     const res = await getBalance();
     processBalanceResponse(res);
-    console.log("BALANCE 1:",res)
+    // console.log("BALANCE 1:",res)
   };
 
 
@@ -571,7 +716,7 @@ useEffect(() => {
   if (intervalRef.current) return; // 🔥 prevent duplicate
 
   intervalRef.current = setInterval(async () => {
-    console.log("BALANCE POLL", new Date());
+    
     if (!localStorage.getItem("jwt")) return;
 
     const res = await getBalance();
@@ -627,10 +772,6 @@ const closePopup = async () => {
     }
 
     await apiRequest("/update-popup-transaction", "POST", {
-      branch_id: BRANCH_ID,
-      username: user?.username,
-      gameplayid: user?.gameplayid,
-      gameplaynum: user?.gameplaynum,
       txid: currentPopupData.txid,
       transaction_type: currentPopupData.transaction_type,
       flag_popup: flagPopupValue
@@ -682,6 +823,7 @@ const closePopup = async () => {
         // const providers = await fetchProvidersByCategory(activeCategory);
         // const providers = await fetchProviderAPI(activeCategory);
         const providers = await fetchProviders(activeCategory);
+        // console.log("CALL PROVIDER:", providers)
         setDynamicProviders(providers);
       } catch (error) {
         console.error("Error fetching providers:", error);
@@ -795,32 +937,35 @@ useEffect(() => {
   setVisibleCount(21);
 }, [selectedProvider, activeCategory, filterType]);
 
-//=========ANNOUNCE===========//
+const [angpaos, setAngpaos] = useState<Array<{ id: number; left: number; delay: number; duration: number; type: 'angpao' | 'sakura' }>>([]);
 
-  const getAnnouncements = () => {
+//========= ANNOUNCE ===========//
 
-    if (!seoData?.running_text) return [];
+const announcements = useMemo(() => {
 
-    return [seoData.running_text];
+  if (!seoData?.running_text) return [];
 
-  };
+  return [seoData.running_text];
 
-  const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
-  const [angpaos, setAngpaos] = useState<Array<{ id: number; left: number; delay: number; duration: number; type: 'angpao' | 'sakura' }>>([]);
-  const announcements = getAnnouncements();
+}, [seoData]);
 
-  useEffect(() => {
-    if (announcements.length === 0) return;
+const [currentAnnouncementIndex, setCurrentAnnouncementIndex] = useState(0);
 
-    const announcementInterval = setInterval(() => {
-      setCurrentAnnouncementIndex(prev =>
-        (prev + 1) % announcements.length
-      );
-    }, 90000);
+useEffect(() => {
 
-    return () => clearInterval(announcementInterval);
+  if (announcements.length === 0) return;
 
-  }, [announcements.length]);
+  const interval = setInterval(() => {
+
+    setCurrentAnnouncementIndex(prev =>
+      (prev + 1) % announcements.length
+    );
+
+  }, 180000);
+
+  return () => clearInterval(interval);
+
+}, [announcements]);
 
   // Generate falling angpao and sakura animation
   // useEffect(() => {
@@ -964,10 +1109,6 @@ const fetchTurnover = async () => {
     date.toISOString().split("T")[0];
 
   const res = await apiRequest("/turnover", "POST", {
-    branch_id: BRANCH_ID,
-    username: user.username,
-    gameplayid: user.gameplayid,
-    gameplaynum: user.gameplaynum,
     category: "All",
     provider: "All",
     start_date: formatDate(past),
@@ -1009,27 +1150,34 @@ useEffect(() => {
         <header className="sticky top-0 z-40 shadow-lg" style={{ background: "linear-gradient(90deg, #F178A1 0%, #FFC1DA 100%)" }}>
           {/* Mobile Header - Logged Out */}
           <div className="flex items-center justify-between px-3 py-2 md:hidden gap-2">
-            {seoData?.logo && (
+            {/* {seoData?.logo && (
               <img 
               src={seoData.logo} 
               alt="Logo"
               onClick={() => navigate("/")}
               className="h-16 w-auto flex-shrink-0" 
               />
-            )}
+            )} */}
+
+            <img 
+              src={logo} 
+              alt="Logo"
+              onClick={() => navigate("/")}
+              className="h-12 w-auto flex-shrink-0" 
+            />
 
             {/* Right - Sign In/Register for mobile */}
             <div className="flex gap-2 flex-shrink-0">
               <button
                 onClick={() => setShowSignInModal(true)}
-                className="text-white font-bold px-3 py-2 rounded-full text-xs transition-all hover:shadow-lg auth-button-enter auth-button-glow"
+                className="text-white font-bold px-5 py-4 rounded-full text-xs transition-all hover:shadow-lg auth-button-enter auth-button-glow"
                 style={{ background: "#F178A1" }}
               >
                 {t("sign_in")}
               </button>
               <button
                 onClick={() => navigate("/register")}
-                className="text-white font-bold px-3 py-2 rounded-full text-xs transition-all hover:shadow-lg auth-button-enter auth-button-glow"
+                className="text-white font-bold px-5 py-4 rounded-full text-xs transition-all hover:shadow-lg auth-button-enter auth-button-glow"
                 style={{ background: "#F178A1" }}
               >
                 {t("sign_up")}
@@ -1107,7 +1255,7 @@ useEffect(() => {
               animation: "marquee 20s linear infinite",
             }}
           >
-            {getAnnouncements()[currentAnnouncementIndex]}
+            {announcements[currentAnnouncementIndex]}
           </div>
         </div>
 
@@ -1471,17 +1619,6 @@ useEffect(() => {
                     </div>
                   ))}
               </div>
-            </div>
-          )}
-
-          {/* ===============================
-            CUSTOM FOOTER (FROM CMS)
-          =============================== */}
-          {customFooter && (
-             <div className="mt-10 w-full overflow-hidden">
-              <div
-                dangerouslySetInnerHTML={{ __html: customFooter }}
-              />
             </div>
           )}
 
@@ -2018,11 +2155,20 @@ useEffect(() => {
           </div>
         )}
 
+        {/* ===============================
+          CUSTOM FOOTER (FROM CMS)
+        =============================== */}
         {customFooter && (
           <div
-            className="mt-6"
-            dangerouslySetInnerHTML={{ __html: customFooter }}
-          />
+            className="rounded-xl mt-2 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
+            style={{ background: "linear-gradient(180deg, #F178A1 0%, #FFC1DA 100%)" }}
+          >
+            <div className="mt-3 w-full overflow-hidden">
+              <div
+                dangerouslySetInnerHTML={{ __html: customFooter }}
+              />
+            </div>
+          </div>
         )}
 
         {/* Falling Angpao & Sakura Animation
@@ -2369,29 +2515,40 @@ useEffect(() => {
         {/* Mobile Header - Logged In */}
         <div className="md:hidden flex items-center justify-between px-2 py-1 gap-2 h-16">
           {/* Left: Burger Menu (enlarged) */}
-          <button onClick={() => setShowMenu(!showMenu)} className="text-white hover:bg-white/20 p-2 rounded-lg transition-all flex-shrink-0 h-14 w-14 flex items-center justify-center">
-            <Menu size={32} />
+          <button onClick={() => setShowMenu(!showMenu)} className="text-white hover:bg-white/20 rounded-lg transition-all flex-shrink-0 h-14 w-14 flex items-center justify-center">
+            <Menu size={40} />
           </button>
-            {seoData?.logo && (
+            {/* {seoData?.logo && (
                 <img 
                 src={seoData.logo} 
                 alt="Logo"
-                className="h-10 w-auto flex-shrink-0" 
+                className="h-14 w-auto flex-shrink-0" 
                 />
-              )}
+              )} */}
+
+              <img 
+                src={logo} 
+                alt="Logo"
+                onClick={() => navigate("/")}
+                className="h-7 w-auto flex-shrink-0" 
+              />
 
           {/* Username and Balance (center) */}
           <div className="flex flex-col items-center gap-0 flex-1 min-w-0">
-            <span className="text-white font-bold text-xs">
-              {user?.username ?? "-"}
-            </span>
-            <span className="text-white font-bold text-xs">{user ? user.idr_balance : "-"}</span>
+            <button
+              onClick={() => navigate("/profiles")}
+            > 
+              <span className="text-white font-bold text-xs">
+                {user?.username ?? "-"}
+              </span><br></br>
+              <span className="text-white font-bold text-xs">{user ? user.idr_balance : "-"}</span>
+            </button>
           </div>
 
           {/* Deposit Button (with animation) */}
           <button
             onClick={() => navigate("/banking")}
-            className="text-white font-bold px-4 py-2 rounded-full text-xs transition-all deposit-button hover:shadow-lg flex-shrink-0"
+            className="text-white font-bold px-6 py-3 rounded-full text-xm transition-all deposit-button hover:shadow-lg flex-shrink-0"
             style={{ background: "#00D4FF" }}
           >
             {t("deposit")}
@@ -2510,7 +2667,7 @@ useEffect(() => {
           className="whitespace-nowrap text-white text-xs font-semibold"
           style={{ animation: "marquee 20s linear infinite" }}
         >
-          {getAnnouncements()[currentAnnouncementIndex]}
+          {announcements[currentAnnouncementIndex]}
         </div>
       </div>
 
@@ -2875,22 +3032,6 @@ useEffect(() => {
             </div>
           </div>
         )}
-
-         {/* ===============================
-            CUSTOM FOOTER (FROM CMS)
-          =============================== */}
-          {customFooter && (
-            <div
-              className="rounded-xl p-3 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
-              style={{ background: "linear-gradient(180deg, #F178A1 0%, #FFC1DA 100%)" }}
-            >
-              <div className="mt-10 w-full overflow-hidden">
-                <div
-                  dangerouslySetInnerHTML={{ __html: customFooter }}
-                />
-              </div>
-            </div>
-          )}
 
         {showPendingPopup && currentPopupData && (
           <div
@@ -3397,12 +3538,21 @@ useEffect(() => {
         </div>
       )}
 
-      {customFooter && (
-        <div
-          className="mt-6"
-          dangerouslySetInnerHTML={{ __html: customFooter }}
-        />
-      )}
+      {/* ===============================
+          CUSTOM FOOTER (FROM CMS)
+        =============================== */}
+        {customFooter && (
+          <div
+            className="rounded-xl mt-2 flex items-center justify-center shadow-sm transition-all duration-300 hover:scale-105"
+            style={{ background: "linear-gradient(180deg, #F178A1 0%, #FFC1DA 100%)" }}
+          >
+            <div className="mt-3 w-full overflow-hidden">
+              <div
+                dangerouslySetInnerHTML={{ __html: customFooter }}
+              />
+            </div>
+          </div>
+        )}
 
       {/* Falling Angpao & Sakura Animation
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-30">

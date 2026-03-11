@@ -4,19 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"slot-backend/internal/config"
 	"slot-backend/internal/middleware"
+	"slot-backend/internal/model"
 	"slot-backend/internal/service"
 	"slot-backend/pkg/response"
 )
 
 func CheckWalletUserHandler(w http.ResponseWriter, r *http.Request) {
-
-	var payload map[string]interface{}
-
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
 
 	claims, ok := r.Context().Value(middleware.UserContextKey).(*service.JWTClaims)
 	if !ok {
@@ -25,6 +20,21 @@ func CheckWalletUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := claims.Token
+
+	var req model.CheckWalletUser
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	payload := map[string]interface{}{
+		"branch_id":        config.BRANCH_ID,
+		"username":         claims.Username,
+		"transaction_type": req.TypeTransaction,
+		"id_tier":          req.TierID,
+		"type_wallet":      req.TypeWallet,
+	}
 
 	resp, err := service.Post(
 		"/account/api/manage/check_wallet_user",
@@ -52,7 +62,6 @@ func CheckWalletHandler(w http.ResponseWriter, r *http.Request) {
 	token := claims.Token
 
 	var req struct {
-		BranchID string `json:"branch_id"`
 		Username string `json:"username"`
 	}
 
@@ -62,9 +71,14 @@ func CheckWalletHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	payload := map[string]interface{}{
+		"branch_id": config.BRANCH_ID,
+		"username":  claims.Username,
+	}
+
 	resp, err := service.Post(
 		"/account/api/manage/check_wallet",
-		req,
+		payload,
 		token,
 	)
 

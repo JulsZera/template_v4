@@ -1,14 +1,12 @@
 package model
 
 type LoginRequest struct {
-	BranchID string `json:"branch_id"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 	ClientIP string `json:"client_ip"`
 }
 
 type RegisterRequest struct {
-	BranchID      string `json:"branch_id"`
 	Username      string `json:"username"`
 	Password      string `json:"password"`
 	Email         string `json:"email"`

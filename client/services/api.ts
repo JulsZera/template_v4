@@ -65,6 +65,7 @@ export interface ProviderData {
   image?: string;
   flag?: string;
   active?: string;
+  apiGameUrl?: string | null;
 }
 
 export interface CategoryProviders {
@@ -98,6 +99,8 @@ export let realBankStatus: any[] = [];
 export let realSEO: any = null;
 
 export let realPopup: any = null;
+
+export let realCanonical: any[] = [];
 
 // ========================================
 // GET BALANCE
@@ -299,7 +302,7 @@ export async function fetchPageData(force = false): Promise<void> {
     const getmostpalycache = await apiRequest("/pagedata/mostplay","POST");
     
     const mostPlayRaw = getmostpalycache || [];
-    console.log("GET MOSTPLAY :", mostPlayRaw)
+    // console.log("GET MOSTPLAY :", mostPlayRaw)
 
     realMostPlay = mostPlayRaw.map(
       (game: any, index: number) => ({
@@ -326,7 +329,7 @@ export async function fetchPageData(force = false): Promise<void> {
 
     realCategories = getRealCategories || [];
 
-    console.log("Categories raw:", realCategories);
+    // console.log("Categories raw:", realCategories);
 
     // ========================================
     // BANNERS
@@ -336,7 +339,7 @@ export async function fetchPageData(force = false): Promise<void> {
 
     realBanners = getBanners || [];
 
-    console.log("Banners:", realBanners);
+    // console.log("Banners:", realBanners);
 
     // ========================================
     // BANK STATUS
@@ -346,7 +349,7 @@ export async function fetchPageData(force = false): Promise<void> {
 
     realBankStatus = getBankStatus || [];
 
-    console.log("Bank status:", realBankStatus);
+    // console.log("Bank status:", realBankStatus);
 
     // ========================================
     // SEO
@@ -366,7 +369,7 @@ export async function fetchPageData(force = false): Promise<void> {
 
     realPopup = getRealPopup?.[0] || null;
 
-    console.log("Popup:", realPopup);
+    // console.log("Popup:", realPopup);
 
     // ========================================
     // PROVIDERS
@@ -403,10 +406,10 @@ export async function fetchPageData(force = false): Promise<void> {
       });
     });
 
-    console.log("Providers built:", realProviders);
+    // console.log("Providers built:", realProviders);
 
     pagedataLoaded = true;
-    console.log("Pagedata loaded successfully");
+    // console.log("Pagedata loaded successfully");
   })();
 
   return pagedataLoadingPromise;
@@ -434,54 +437,55 @@ export async function fetchProvidersByCategory(
 // ========================================
 // FETCH GAMES BY CATEGORY AND PROVIDER
 // ========================================
-export async function fetchProviderAPI(
-  categorySlug: string
-): Promise<ProviderData[]> {
+// export async function fetchProviderAPI(
+//   categorySlug: string
+// ): Promise<ProviderData[]> {
 
-  const result = await apiRequest(
-    "/provider",
-    "POST",
-    {
-      branch_id: BRANCH_ID,
-      category: normalizeCategoryAPI(categorySlug),
-    }
-  );
+//   const result = await apiRequest(
+//     "/provider",
+//     "POST",
+//     {
+//       branch_id: BRANCH_ID,
+//       category: normalizeCategoryAPI(categorySlug),
+//     }
+//   );
 
-  if (!result || result.rcode !== "00") {
-    console.error("Failed load providers", result);
-    return [];
-  }
+//   if (!result || result.rcode !== "00") {
+//     console.error("Failed load providers", result);
+//     return [];
+//   }
 
-  const providersRaw = result.data_provider || [];
+//   const providersRaw = result.data_provider || [];
 
-  return providersRaw.map((provider: any) => {
-    const slug = slugifyProviderName(provider.provider_name);
+//   return providersRaw.map((provider: any) => {
+//     const slug = slugifyProviderName(provider.provider_name);
 
-    providerSlugToId[slug] = provider.id_mapping_provider;
+//     providerSlugToId[slug] = provider.id_mapping_provider;
 
-    // 🔥 HANDLE IMAGE BASED ON ACTIVE STATUS
-    let finalImage = provider.image_url;
+//     // 🔥 HANDLE IMAGE BASED ON ACTIVE STATUS
+//     let finalImage = provider.image_url;
 
-    if (provider.active === "0") {
-      finalImage = provider.image_comingsoon;
-    }
+//     if (provider.active === "0") {
+//       finalImage = provider.image_comingsoon;
+//     }
 
-    if (provider.active === "2") {
-      finalImage = provider.image_maintenance;
-    }
+//     if (provider.active === "2") {
+//       finalImage = provider.image_maintenance;
+//     }
 
-    return {
-      id: provider.id_mapping_provider,
-      name: provider.provider_name,
-      display: provider.provider_display,
-      slug: slug,
-      image: finalImage,
-      flag: "🎮",
-      active: provider.active,
-      apiGameUrl: provider.api_game_url || null
-    };
-  });
-}
+//     return {
+//       id: provider.id_mapping_provider,
+//       name: provider.provider_name,
+//       display: provider.provider_display,
+//       slug: slug,
+//       image: finalImage,
+//       flag: "🎮",
+//       active: provider.active,
+//       apiGameUrl: provider.api_game_url || null,
+//       hasDirectLaunch: !!provider.api_game_url
+//     };
+//   });
+// }
 // export async function fetchGamesByCategoryAndProvider(
 //   category: string,
 //   provider?: string
@@ -787,6 +791,18 @@ export function getPopup() {
 export function getMostPlay(): Game[] {
   return realMostPlay;
 }
+
+export function setCanonical(data: any[]) {
+  realCanonical = data || [];
+}
+
+export function getCanonical() {
+  return realCanonical;
+}
+
+const getCanonicalRaw = await apiRequest("/pagedata/canonical", "POST");
+
+setCanonical(getCanonicalRaw);
 
 // ========================================
 // LAUNCH GAME

@@ -24,14 +24,14 @@ export function startCacheWatcher() {
       if (json.provider !== versions.provider) {
 
         versions.provider = json.provider;
-        console.log("Provider cache updated");
+        // console.log("Provider cache updated");
 
       }
 
       if (json.gamelist !== versions.gamelist) {
 
         versions.gamelist = json.gamelist;
-        console.log("Game list cache updated");
+        // console.log("Game list cache updated");
 
       }
 

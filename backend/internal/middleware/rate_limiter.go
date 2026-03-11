@@ -20,7 +20,7 @@ var (
 
 const (
 	maxRequests = 50
-	window      = 20 * time.Second
+	window      = 10 * time.Second
 )
 
 func RateLimiter(next http.Handler) http.Handler {

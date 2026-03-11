@@ -18,7 +18,6 @@ const Profile = () => {
   const { t } = useLanguage();
   const { user } = useUser();
   const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
-
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [loading, setLoading] = useState(false);
 
@@ -267,9 +266,7 @@ const Profile = () => {
 
   const fetchCategories = async () => {
 
-    const res = await apiRequest("/categories", "POST", {
-      branch_id: BRANCH_ID
-    });
+    const res = await apiRequest("/categories", "POST", {});
 
     console.log("CATEGORIES:", res)
 
@@ -286,7 +283,6 @@ const Profile = () => {
   const fetchProviders = async (category: string) => {
     
     const res = await apiRequest("/provider", "POST", {
-      branch_id: BRANCH_ID,
       category: category
     });
 
@@ -313,7 +309,6 @@ const Profile = () => {
     setLoadingTurnover(true);
 
     const res = await apiRequest("/turnover", "POST", {
-      branch_id: BRANCH_ID,
       username: user.username,
       gameplayid: user.gameplayid,
       gameplaynum: user.gameplaynum,
@@ -351,7 +346,6 @@ const Profile = () => {
 
       try {
         const res = await apiRequest("/profile", "POST", {
-          branch_id: BRANCH_ID,
           username: user.username,
           gameplayid: user.gameplayid,
           gameplaynum: user.gameplaynum,
@@ -407,7 +401,6 @@ const Profile = () => {
     setLoading(true);
     try {
       const res = await apiRequest("/check-wallet", "POST", {
-        branch_id: BRANCH_ID,
         username: user.username,
       });
      // console.log("RESPONSE BANKING:", res)
@@ -428,7 +421,6 @@ const Profile = () => {
     setLoading(true);
     try {
       const res = await apiRequest("/turnover", "POST", {
-        branch_id: BRANCH_ID,
         username: user.username,
         gameplayid: user.gameplayid,
         gameplaynum: user.gameplaynum,
@@ -445,7 +437,6 @@ const Profile = () => {
 
   const fetchBankList = async () => {
     const res = await apiRequest("/listbank", "POST", {
-      branch_id: BRANCH_ID,
     });
 
     // console.log("RESPONSE LIST BANK:",res)
@@ -461,7 +452,6 @@ const Profile = () => {
     setReffLoading(true);
 
     const res = await apiRequest("/check-request-reff", "POST", {
-      branch_id: BRANCH_ID,
       username: user.username,
       gameplayid: user.gameplayid,
       gameplaynum: user.gameplaynum,
@@ -570,7 +560,6 @@ const Profile = () => {
 
   const formData = new FormData();
 
-  formData.append("branch_id", BRANCH_ID);
   formData.append("username", user.username);
   formData.append("gameplayid", user.gameplayid);
   formData.append("gameplaynum", user.gameplaynum);

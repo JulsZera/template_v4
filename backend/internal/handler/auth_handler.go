@@ -2,46 +2,14 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
-	"net"
 	"net/http"
 
+	"slot-backend/internal/config"
 	"slot-backend/internal/model"
 	"slot-backend/internal/service"
+	utils "slot-backend/internal/ulits"
 	"slot-backend/pkg/response"
 )
-
-func GetClientIP(r *http.Request) string {
-
-	// 1️⃣ Cloudflare
-	ip := r.Header.Get("CF-Connecting-IP")
-
-	// 2️⃣ X-Forwarded-For
-	if ip == "" {
-		ip = r.Header.Get("X-Forwarded-For")
-	}
-
-	// 3️⃣ RemoteAddr
-	if ip == "" {
-		ip, _, _ = net.SplitHostPort(r.RemoteAddr)
-	}
-
-	return ip
-}
-
-func NormalizeIPv4(ip string) string {
-	parsed := net.ParseIP(ip)
-	if parsed == nil {
-		return ip
-	}
-
-	ipv4 := parsed.To4()
-	if ipv4 != nil {
-		return ipv4.String()
-	}
-
-	return ip // fallback kalau tidak bisa convert
-}
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -55,15 +23,22 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 🔥 Ambil IP client dari request
-	clientIP := GetClientIP(r)
-	clientIP = NormalizeIPv4(clientIP)
+	clientIP := utils.GetRealIP(r)
+	clientIP = utils.NormalizeIPv4(clientIP)
 
 	// 🔥 Tambahkan ke request yang dikirim ke provider
 	req.ClientIP = clientIP
 
+	payload := map[string]interface{}{
+		"branch_id": config.BRANCH_ID,
+		"username":  req.Username,
+		"password":  req.Password,
+		"client_ip": req.ClientIP,
+	}
+
 	resp, err := service.Post(
 		"/account/api/manage/login",
-		req,
+		payload,
 		"",
 	)
 
@@ -73,14 +48,13 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var result map[string]interface{}
-
 	json.Unmarshal(resp, &result)
 
-	log.Println("LOGIN API RESPONSE:", result)
+	rcode, _ := result["rcode"].(string)
+	message, _ := result["message"].(string)
 
-	if result["rcode"] != "00" {
-
-		response.Send(w, 401, "Login failed", result)
+	if rcode != "00" {
+		response.Send(w, 400, message, result)
 		return
 	}
 
@@ -101,7 +75,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		email,
 		phone,
 		username,
-		req.BranchID,
+		config.BRANCH_ID,
 		sessionToken,
 		gameplayID,
 		gameplayNum,
@@ -129,9 +103,38 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	clientIP := utils.GetRealIP(r)
+	clientIP = utils.NormalizeIPv4(clientIP)
+
+	// 🔥 Tambahkan ke request yang dikirim ke provider
+	req.ClientIP = clientIP
+
+	payload := map[string]interface{}{
+		"branch_id":      config.BRANCH_ID,
+		"username":       req.Username,
+		"password":       req.Password,
+		"email":          req.Email,
+		"phonenumber":    req.PhoneNumber,
+		"refferal":       req.Refferal,
+		"type_wallet":    req.TypeWallet,
+		"id_wallet":      req.IDWallet,
+		"account_name":   req.AccountName,
+		"account_number": req.AccountNumber,
+		"client_ip":      req.ClientIP,
+	}
+
+	if config.BRANCH_ID == "" || req.Username == "" ||
+		req.Password == "" || req.Email == "" ||
+		req.PhoneNumber == "" || req.Refferal == "" ||
+		req.TypeWallet == "" || req.IDWallet == "" ||
+		req.AccountName == "" || req.AccountNumber == "" {
+		response.Send(w, 400, "Missing required fields", nil)
+		return
+	}
+
 	resp, err := service.Post(
 		"/account/api/manage/register",
-		req,
+		payload,
 		"",
 	)
 

@@ -26,9 +26,14 @@ type WalletRequest struct {
 }
 
 type HistoryRequest struct {
-	BranchID  string `json:"branch_id"`
-	Username  string `json:"username"`
 	StartDate string `json:"start_date"`
 	EndDate   string `json:"end_date"`
 	Type      string `json:"type"`
+}
+
+type TurnoverRequest struct {
+	Category  string `json:"category"`
+	Provider  string `json:"provider"`
+	StartDate string `json:"start_date"`
+	EndDate   string `json:"end_date"`
 }

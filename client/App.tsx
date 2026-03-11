@@ -14,6 +14,7 @@ import Register from "./pages/Register";
 import Promo from "./pages/Promo";
 import Banking from "./pages/Banking";
 import Profile from "./pages/Profile";
+import Amp from "./pages/Amp";
 import toast from "react-hot-toast";
 
 const queryClient = new QueryClient();
@@ -202,6 +203,7 @@ if (authLoading) return null;
               <Route path="/promo" element={<Promo />} />
               <Route path="/banking" element={<Banking />} />
               <Route path="/profiles" element={<Profile />} />
+              <Route path="/Amp" element={<Amp />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

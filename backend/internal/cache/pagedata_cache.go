@@ -27,6 +27,7 @@ type PageDataCache struct {
 	ProviderPGACache []byte
 	ContactCache     []byte
 	JackpotCache     []byte
+	RedirectAMPCache []byte
 }
 
 var pageDataCache = &PageDataCache{}
@@ -75,6 +76,9 @@ func SetPageData(data []byte) {
 	jackpot, _ := json.Marshal(map[string]string{
 		"jackpot_amount": parsed.JackpotAmount,
 	})
+	redirectamp, _ := json.Marshal(map[string]string{
+		"jackpot_amount": parsed.RedirectAMP,
+	})
 
 	pageDataCache.mutex.Lock()
 	defer pageDataCache.mutex.Unlock()
@@ -94,6 +98,7 @@ func SetPageData(data []byte) {
 	pageDataCache.ProviderPGACache = providerpga
 	pageDataCache.ContactCache = contact
 	pageDataCache.JackpotCache = jackpot
+	pageDataCache.RedirectAMPCache = redirectamp
 
 	pageDataCache.Version = time.Now().Unix()
 	pageDataCache.UpdatedAt = time.Now()
@@ -112,3 +117,4 @@ func GetBank() []byte        { return pageDataCache.BankCache }
 func GetProviderPGA() []byte { return pageDataCache.ProviderPGACache }
 func GetContact() []byte     { return pageDataCache.ContactCache }
 func GetJackpot() []byte     { return pageDataCache.JackpotCache }
+func GetRedirectAMP() []byte { return pageDataCache.RedirectAMPCache }

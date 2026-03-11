@@ -189,11 +189,9 @@ export default function Promo() {
       // console.log("JWT IN PROMO:", localStorage.getItem("jwt"));
 
       const res = await apiRequest("/get-promotion", "POST", {
-        branch_id: BRANCH_ID,
         username: user.username,
       });
 
-      // console.log("BRANCH_ID :", BRANCH_ID)
       // console.log("USERNAME : ",user.username)
       // console.log("RESPONSE: ",res?.data?.rcode)
 

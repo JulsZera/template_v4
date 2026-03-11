@@ -15,7 +15,6 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { user } = useUser(); // kalau perlu nanti
-  const BRANCH_ID = import.meta.env.VITE_BRANCH_ID;
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -197,7 +196,6 @@ export default function Register() {
   useEffect(() => {
     const fetchBank = async () => {
       const res = await apiRequest("/listbank", "POST", {
-        branch_id: BRANCH_ID,
       });
 
       console.log("BANK RES:", res);
@@ -223,7 +221,6 @@ export default function Register() {
       setLoading(true);
 
       const res = await apiRequest("/register", "POST", {
-        branch_id: BRANCH_ID,
         username: username,
         password: password,
         email: email,
@@ -233,7 +230,6 @@ export default function Register() {
         id_wallet: selectedBank,
         account_name: accountName,
         account_number: accountNumber,
-        client_ip: "127.0.0.1",
       });
 
       if (res.status) {

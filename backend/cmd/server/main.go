@@ -105,6 +105,7 @@ func main() {
 
 			// LAUNCHGAME
 			r.Post("/launchgame", handler.LaunchGameHandler)
+			r.Post("/launchprovider", handler.LaunchProviderHandler)
 
 		})
 

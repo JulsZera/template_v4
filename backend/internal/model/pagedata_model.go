@@ -18,4 +18,5 @@ type PageDataResponse struct {
 	DataContactInformation interface{} `json:"data_contactinformation"`
 
 	JackpotAmount string `json:"jackpot_amount"`
+	RedirectAMP   string `json:"redirect_amp"`
 }

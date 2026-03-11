@@ -57,3 +57,7 @@ func ContactHandler(w http.ResponseWriter, r *http.Request) {
 func JackpotHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(cache.GetJackpot())
 }
+
+func RedirectAMPHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write(cache.GetRedirectAMP())
+}
